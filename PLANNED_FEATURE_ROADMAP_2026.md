@@ -14,6 +14,9 @@ Legend
 - **Post-MVP** — required to make the product pleasant for daily use.
 - **Enterprise** — only relevant to multi-tenant cloud or on-prem enterprise installs.
 
+Completed
+- #67 - Added system-aware light/dark mode with a top-right header toggle in the web app.
+
 ---
 
 

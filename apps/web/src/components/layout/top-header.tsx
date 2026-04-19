@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flex, Text, Badge } from "@radix-ui/themes";
+import { Flex, Text, Badge, IconButton } from "@radix-ui/themes";
 import {
   FolderTree,
   ListTodo,
@@ -12,7 +12,10 @@ import {
   Boxes,
   Workflow,
   Infinity as InfinityIcon,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { useThemePreference } from "@/components/theme/app-theme-provider";
 
 const NAV: Array<{ href: string; label: string; Icon: typeof FolderTree }> = [
   { href: "/projects", label: "Projects", Icon: FolderTree },
@@ -26,6 +29,9 @@ const NAV: Array<{ href: string; label: string; Icon: typeof FolderTree }> = [
 
 export function TopHeader() {
   const pathname = usePathname();
+  const { appearance, toggleTheme } = useThemePreference();
+  const nextModeLabel = appearance === "dark" ? "light" : "dark";
+
   return (
     <Flex
       align="center"
@@ -65,6 +71,15 @@ export function TopHeader() {
         })}
       </Flex>
       <Flex align="center" gap="2">
+        <IconButton
+          aria-label={`Switch to ${nextModeLabel} mode`}
+          title={`Switch to ${nextModeLabel} mode`}
+          variant="soft"
+          color="gray"
+          onClick={toggleTheme}
+        >
+          {appearance === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        </IconButton>
         <Badge color="gray" variant="soft">default workspace</Badge>
       </Flex>
     </Flex>

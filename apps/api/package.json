@@ -1,0 +1,16 @@
+{
+  "name": "@ouroboros/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shim package.json so Turborepo can run the FastAPI app alongside the Next.js app. All scripts bootstrap a local .venv (with uv) on first run, then exec inside it.",
+  "scripts": {
+    "bootstrap": "./scripts/with-venv.sh true",
+    "dev": "./scripts/with-venv.sh uv run uvicorn ouroboros_api.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "./scripts/with-venv.sh uv sync --extra dev",
+    "lint": "./scripts/with-venv.sh uv run ruff check .",
+    "test": "./scripts/with-venv.sh uv run pytest -q",
+    "format": "./scripts/with-venv.sh uv run ruff format .",
+    "migrate": "./scripts/with-venv.sh bash -c 'uv run alembic upgrade head && uv run python -m ouroboros_api.seeds.bootstrap'",
+    "clean": "rm -rf .venv .pytest_cache .ruff_cache .mypy_cache"
+  }
+}

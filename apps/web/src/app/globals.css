@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@radix-ui/themes/styles.css";
+@import "@xyflow/react/dist/style.css";
+
+html, body, #__next { height: 100%; }
+body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif); }
+
+.app-shell {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  border-right: 1px solid var(--gray-a5);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.app-main {
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  color: var(--gray-11);
+  border: 1px dashed var(--gray-a5);
+  border-radius: 8px;
+}
+
+.flow-wrapper { height: calc(100vh - 220px); border: 1px solid var(--gray-a5); border-radius: 8px; }

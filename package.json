@@ -1,0 +1,24 @@
+{
+  "name": "ouroboros",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ouroboros monorepo: FastAPI orchestrator + Next.js UI, run together via Turborepo.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf .turbo node_modules",
+    "format": "turbo run format"
+  },
+  "packageManager": "yarn@4.5.3",
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

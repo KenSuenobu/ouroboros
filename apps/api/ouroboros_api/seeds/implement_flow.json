@@ -1,0 +1,116 @@
+{
+  "name": "implement",
+  "description": "Translation of the /implement skill: fetch issue, plan, code, audit, build, test, commit, PR.",
+  "is_default": true,
+  "nodes": [
+    {
+      "id": "issue.fetcher",
+      "type": "agent",
+      "agent_role": "issue.fetcher",
+      "label": "Fetch issue",
+      "position": {"x": 80, "y": 80}
+    },
+    {
+      "id": "issue.summarizer",
+      "type": "agent",
+      "agent_role": "issue.summarizer",
+      "label": "Summarize",
+      "position": {"x": 320, "y": 80}
+    },
+    {
+      "id": "clarify.gate",
+      "type": "wait_for_user",
+      "label": "Clarify (optional)",
+      "position": {"x": 560, "y": 80},
+      "config": {"skip_if_no_questions": true}
+    },
+    {
+      "id": "branch.setup",
+      "type": "agent",
+      "agent_role": "branch.setup",
+      "label": "Branch ticket-<n>",
+      "position": {"x": 800, "y": 80}
+    },
+    {
+      "id": "planner",
+      "type": "agent",
+      "agent_role": "planner",
+      "label": "Plan",
+      "position": {"x": 80, "y": 240}
+    },
+    {
+      "id": "coder",
+      "type": "agent",
+      "agent_role": "coder",
+      "label": "Code",
+      "position": {"x": 320, "y": 240}
+    },
+    {
+      "id": "internal.audit",
+      "type": "agent",
+      "agent_role": "internal.audit",
+      "label": "Internal audit",
+      "position": {"x": 560, "y": 240}
+    },
+    {
+      "id": "verify.build",
+      "type": "agent",
+      "agent_role": "verify.build",
+      "label": "Build",
+      "position": {"x": 800, "y": 240}
+    },
+    {
+      "id": "verify.test",
+      "type": "agent",
+      "agent_role": "verify.test",
+      "label": "Test",
+      "position": {"x": 80, "y": 400}
+    },
+    {
+      "id": "notes.updater",
+      "type": "agent",
+      "agent_role": "notes.updater",
+      "label": "Roadmap + version",
+      "position": {"x": 320, "y": 400}
+    },
+    {
+      "id": "commit.push",
+      "type": "agent",
+      "agent_role": "commit.push",
+      "label": "Commit + push",
+      "position": {"x": 560, "y": 400},
+      "config": {"side_effecting": true}
+    },
+    {
+      "id": "pr.reviewer.assign",
+      "type": "agent",
+      "agent_role": "pr.reviewer.assign",
+      "label": "Assign Copilot",
+      "position": {"x": 800, "y": 400},
+      "config": {"side_effecting": true}
+    },
+    {
+      "id": "issue.commenter",
+      "type": "agent",
+      "agent_role": "issue.commenter",
+      "label": "Comment issue",
+      "position": {"x": 1040, "y": 400},
+      "config": {"side_effecting": true}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source": "issue.fetcher", "target": "issue.summarizer"},
+    {"id": "e2", "source": "issue.summarizer", "target": "clarify.gate"},
+    {"id": "e3", "source": "clarify.gate", "target": "branch.setup"},
+    {"id": "e4", "source": "branch.setup", "target": "planner"},
+    {"id": "e5", "source": "planner", "target": "coder"},
+    {"id": "e6", "source": "coder", "target": "internal.audit"},
+    {"id": "e7", "source": "internal.audit", "target": "verify.build"},
+    {"id": "e8", "source": "verify.build", "target": "verify.test"},
+    {"id": "e9", "source": "verify.test", "target": "notes.updater", "condition": "tests.passed"},
+    {"id": "e9b", "source": "verify.test", "target": "coder", "condition": "tests.failed && attempt < 3"},
+    {"id": "e10", "source": "notes.updater", "target": "commit.push"},
+    {"id": "e11", "source": "commit.push", "target": "pr.reviewer.assign"},
+    {"id": "e12", "source": "pr.reviewer.assign", "target": "issue.commenter"}
+  ]
+}

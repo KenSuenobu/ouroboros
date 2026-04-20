@@ -9,8 +9,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _default_data_dir() -> Path:
-    here = Path(__file__).resolve()
-    return (here.parents[3] / "data").resolve()
+    return Path("./data")
+
+
+def _sqlite_db_url_for_data_dir(data_dir: Path) -> str:
+    sqlite_path = data_dir / "ouroboros.sqlite"
+    if sqlite_path.is_absolute():
+        return f"sqlite+aiosqlite:///{sqlite_path.as_posix()}"
+    return f"sqlite+aiosqlite:///./{sqlite_path.as_posix().lstrip('./')}"
 
 
 class Settings(BaseSettings):
@@ -37,7 +43,7 @@ class Settings(BaseSettings):
     def db_url_resolved(self) -> str:
         if self.db_url:
             return self.db_url
-        return f"sqlite+aiosqlite:///{(self.data_dir / 'ouroboros.sqlite').as_posix()}"
+        return _sqlite_db_url_for_data_dir(self.data_dir)
 
     def runs_dir(self) -> Path:
         return self.data_dir / "runs"

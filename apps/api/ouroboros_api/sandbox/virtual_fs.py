@@ -51,7 +51,14 @@ class VirtualFs:
                     tofile=f"b/{rel}",
                 )
             )
-            changes.append({"path": rel, "kind": "modified" if path.exists() else "added", "diff": diff})
+            changes.append(
+                {
+                    "path": rel,
+                    "kind": "modified" if path.exists() else "added",
+                    "diff": diff,
+                    "content": content,
+                }
+            )
         for rel in self._deleted:
-            changes.append({"path": rel, "kind": "deleted", "diff": ""})
+            changes.append({"path": rel, "kind": "deleted", "diff": "", "content": ""})
         return changes

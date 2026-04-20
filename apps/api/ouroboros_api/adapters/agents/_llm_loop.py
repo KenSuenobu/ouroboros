@@ -102,8 +102,8 @@ async def llm_agent_loop(
                 {
                     "kind": "file_diff",
                     "name": change["path"],
-                    "inline_content": change["diff"],
-                    "meta": {"kind": change["kind"]},
+                    "inline_content": change.get("content", ""),
+                    "meta": {"kind": change["kind"], "path": change["path"]},
                 }
             )
 

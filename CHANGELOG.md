@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-04-20
+
+- Added true Monaco `DiffEditor` dry-run file diffs using sandbox originals and artifact proposed content, with a per-view side-by-side/unified toggle.
+- Added `GET /api/runs/{id}/sandbox-file?path=...` with sandbox path traversal protection and tests for both valid reads and `../../etc/passwd` rejection.
+
 ## 2026-04-19
 
 - Added interrupted run recovery with persisted `Run.snapshot_json` context, startup `running -> interrupted` sweep, and a resume API/UI path that skips previously succeeded nodes.

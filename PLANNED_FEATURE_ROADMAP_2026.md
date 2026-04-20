@@ -22,6 +22,7 @@ Completed
 - #11 - Added real-time stdout/stderr streaming for shell steps with step-level live logs.
 - #12 - Added `ouroboros init` CLI flow to scaffold `.env` / `.env.example` with sensible defaults.
 - #13 - Added interrupted-run snapshots plus resume support so runs can continue after API restarts.
+- #14 - Added true dry-run file diff viewing with Monaco `DiffEditor`, sandbox original-file reads, and side-by-side/unified mode toggle.
 
 ---
 
@@ -39,7 +40,6 @@ Completed
 | #     | Issue                                                                                          | Tier | Notes                                                    |
 |-------|------------------------------------------------------------------------------------------------|------|----------------------------------------------------------|
 | #8 | Healthcheck panel: ping each configured provider, surface "needs key" / "ollama unreachable"   | MVP  | New `GET /api/providers/{id}/health` and a `/health` page       |
-| #14 | Robust dry-run diff viewer: real side-by-side using Monaco's `DiffEditor`                      | MVP  | Current `DiffViewer` is a thin wrapper; needs left/right inputs  |
 
 ## Stage 2 — UX & power-user features
 

@@ -1,9 +1,9 @@
+@import "@radix-ui/themes/styles.css";
+@import "@xyflow/react/dist/style.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import "@radix-ui/themes/styles.css";
-@import "@xyflow/react/dist/style.css";
 
 html, body, #__next { height: 100%; }
 body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif); }

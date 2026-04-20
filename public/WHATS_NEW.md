@@ -4,3 +4,4 @@
 - Added a first-run onboarding wizard and workspace onboarding status APIs to guide setup through workspace naming, first project creation, and first provider connection.
 - Added provider health probes with persisted status/error reporting, provider badges, and a dedicated health summary page.
 - Added repo manifest introspection with build/test command suggestions and one-click "Use this" actions on the Projects page.
+- Added per-language router defaults for planner/summarizer/audit/coder seed agents, with backfill migration coverage for existing installs.

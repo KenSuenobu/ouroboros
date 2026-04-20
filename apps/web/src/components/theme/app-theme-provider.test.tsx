@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AppThemeProvider, useThemePreference } from "./app-theme-provider";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AppThemeProvider, STORAGE_KEY, useThemePreference } from "./app-theme-provider";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -91,6 +91,8 @@ function renderThemeProbe() {
 }
 
 describe("AppThemeProvider", () => {
+  let view: ReturnType<typeof renderThemeProbe> | undefined;
+
   beforeEach(() => {
     vi.unstubAllGlobals();
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -98,9 +100,14 @@ describe("AppThemeProvider", () => {
     document.body.innerHTML = "";
   });
 
+  afterEach(() => {
+    view?.cleanup();
+    view = undefined;
+  });
+
   it("follows system preference when no override is stored", async () => {
     const mediaQueryList = installMatchMediaMock(true);
-    const view = renderThemeProbe();
+    view = renderThemeProbe();
 
     expect(view.getPreference()).toBe("system");
     expect(view.getAppearance()).toBe("dark");
@@ -110,16 +117,14 @@ describe("AppThemeProvider", () => {
     });
 
     await vi.waitFor(() => {
-      expect(view.getAppearance()).toBe("light");
+      expect(view!.getAppearance()).toBe("light");
     });
-
-    view.cleanup();
   });
 
   it("uses stored override and persists manual toggle", async () => {
     installMatchMediaMock(true);
-    window.localStorage.setItem("ouroboros-theme-preference", "light");
-    const view = renderThemeProbe();
+    window.localStorage.setItem(STORAGE_KEY, "light");
+    view = renderThemeProbe();
 
     expect(view.getPreference()).toBe("light");
     expect(view.getAppearance()).toBe("light");
@@ -127,11 +132,9 @@ describe("AppThemeProvider", () => {
     view.toggle();
 
     await vi.waitFor(() => {
-      expect(view.getAppearance()).toBe("dark");
-      expect(view.getPreference()).toBe("dark");
-      expect(window.localStorage.getItem("ouroboros-theme-preference")).toBe("dark");
+      expect(view!.getAppearance()).toBe("dark");
+      expect(view!.getPreference()).toBe("dark");
+      expect(window.localStorage.getItem(STORAGE_KEY)).toBe("dark");
     });
-
-    view.cleanup();
   });
 });

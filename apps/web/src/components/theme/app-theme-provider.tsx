@@ -14,7 +14,7 @@ import {
 type ThemePreference = "system" | "light" | "dark";
 type ThemeAppearance = "light" | "dark";
 
-const STORAGE_KEY = "ouroboros-theme-preference";
+export const STORAGE_KEY = "ouroboros-theme-preference";
 const DARK_SCHEME_QUERY = "(prefers-color-scheme: dark)";
 
 type ThemePreferenceContextValue = {
@@ -35,8 +35,12 @@ function getStoredPreference(): ThemePreference {
     return "system";
   }
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  return isThemePreference(stored) ? stored : "system";
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return isThemePreference(stored) ? stored : "system";
+  } catch {
+    return "system";
+  }
 }
 
 export function resolveAppearance(preference: ThemePreference, prefersDark: boolean): ThemeAppearance {
@@ -79,12 +83,16 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (preference === "system") {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
+    try {
+      if (preference === "system") {
+        window.localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
 
-    window.localStorage.setItem(STORAGE_KEY, preference);
+      window.localStorage.setItem(STORAGE_KEY, preference);
+    } catch {
+      // Storage unavailable (e.g. private browsing with storage disabled); skip persistence.
+    }
   }, [preference]);
 
   const appearance = resolveAppearance(preference, prefersDark);

@@ -9,6 +9,7 @@ import type {
   McpRegistryEntry,
   McpServer,
   Project,
+  ProjectIntrospection,
   Provider,
   ProviderHealth,
   ProviderModel,
@@ -24,6 +25,11 @@ export const useProjects = () => useSWR<Project[]>("/api/projects", fetcher);
 export const useWorkspaceOnboarding = () =>
   useSWR<WorkspaceOnboardingStatus>("/api/workspaces/me", fetcher);
 export const useProject = (id: string | null) => useSWR<Project>(id ? `/api/projects/${id}` : null, fetcher);
+export const useProjectIntrospection = (id: string | null) =>
+  useSWR<ProjectIntrospection>(id ? `/api/projects/${id}/introspect` : null, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
 export const useIssues = (projectId: string | null, state = "open") =>
   useSWR<Issue[]>(projectId ? `/api/projects/${projectId}/issues?state=${state}` : null, fetcher);
 export const useRoadmap = (projectId: string | null) =>

@@ -36,6 +36,11 @@ export type Project = {
 
 export type ProjectInput = Omit<Project, "id" | "workspace_id" | "created_at" | "updated_at">;
 
+export type ProjectIntrospection = {
+  build: string[];
+  test: string[];
+};
+
 export type Issue = {
   id: string;
   project_id: string;

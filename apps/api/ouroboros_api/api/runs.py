@@ -120,6 +120,24 @@ async def cancel_run(
     return {"cancelled": cancelled}
 
 
+@router.post("/{run_id}/resume", response_model=RunOut)
+async def resume_run(
+    run_id: str,
+    ws: Workspace = Depends(workspace),
+    session: AsyncSession = Depends(db_session),
+) -> RunOut:
+    run = await session.get(Run, run_id)
+    if not run or run.workspace_id != ws.id:
+        raise HTTPException(404, "Run not found")
+    if run.status != "interrupted":
+        raise HTTPException(400, "Only interrupted runs can be resumed")
+    if run_manager.is_running(run.id):
+        raise HTTPException(409, "Run is already active")
+    await run_manager.resume(run.id)
+    await session.refresh(run)
+    return RunOut.model_validate(run)
+
+
 @router.post("/{run_id}/retry", response_model=RunOut)
 async def retry_run(
     run_id: str,

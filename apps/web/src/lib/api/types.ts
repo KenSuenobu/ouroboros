@@ -200,7 +200,7 @@ export type RunStep = {
   agent_id: string | null;
   sequence: number;
   attempt: number;
-  status: "pending" | "running" | "succeeded" | "failed" | "cancelled" | string;
+  status: "pending" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled" | string;
   started_at: string | null;
   finished_at: string | null;
   provider_id: string | null;
@@ -221,7 +221,7 @@ export type Run = {
   issue_id: string | null;
   issue_number: number | null;
   title: string;
-  status: "pending" | "running" | "succeeded" | "failed" | "cancelled" | string;
+  status: "pending" | "running" | "interrupted" | "succeeded" | "failed" | "cancelled" | string;
   dry_run: boolean;
   started_at: string | null;
   finished_at: string | null;

@@ -2,6 +2,7 @@
 
 ## 2026-04-19
 
+- Added interrupted run recovery with persisted `Run.snapshot_json` context, startup `running -> interrupted` sweep, and a resume API/UI path that skips previously succeeded nodes.
 - Added an `ouroboros init` CLI command that prompts for data directory/DB URL and writes `.env` plus `.env.example` without overwriting existing `.env`.
 - Added README quick-start Step 0 guidance for running `uv run ouroboros init` before local development setup.
 - Added line-by-line shell output streaming via `step.log` run events and surfaced live per-step log panes on the run detail timeline.

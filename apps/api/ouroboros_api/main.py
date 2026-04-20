@@ -21,7 +21,8 @@ from .api import (
     ws,
 )
 from .config import settings
-from .db.session import init_db
+from .db.session import SessionLocal, init_db
+from .orchestrator.engine import interrupt_in_flight_runs
 
 logging.basicConfig(level=settings.log_level)
 log = logging.getLogger("ouroboros")
@@ -31,6 +32,10 @@ log = logging.getLogger("ouroboros")
 async def lifespan(app: FastAPI):
     settings.ensure_dirs()
     await init_db()
+    async with SessionLocal() as session:
+        interrupted = await interrupt_in_flight_runs(session)
+    if interrupted:
+        log.info("marked %s in-flight runs as interrupted at startup", interrupted)
     log.info("ouroboros api ready (data_dir=%s)", settings.data_dir)
     yield
 

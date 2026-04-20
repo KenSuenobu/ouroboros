@@ -227,6 +227,7 @@ class Run(Base, TimestampMixin):
     total_tokens_out: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     cost_estimate_usd: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     override_models: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    snapshot_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     plan: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     error: Mapped[str | None] = mapped_column(Text)
     sandbox_path: Mapped[str | None] = mapped_column(String(500))

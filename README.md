@@ -22,6 +22,10 @@ api workspace bootstraps a local `apps/api/.venv` and installs `uv` inside it
 on first run.
 
 ```bash
+cd apps/api
+./scripts/with-venv.sh uv run ouroboros init  # Step 0: write local OUROBOROS_* defaults into .env/.env.example
+cd ../..
+
 make install       # installs root turbo + web deps via yarn, api deps via uv
 make migrate       # creates the SQLite db and seeds defaults
 make dev           # runs api on :8000 and web on :3000 in parallel via Turborepo

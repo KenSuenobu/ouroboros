@@ -15,7 +15,7 @@ import { PageShell, PageHeader } from "@/components/layout/page-shell";
 import { SidebarList } from "@/components/common/sidebar-list";
 import { useProviderModels, useProviders } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
-import type { Provider, ProviderInput } from "@/lib/api/types";
+import type { Provider, ProviderHealth, ProviderInput } from "@/lib/api/types";
 
 const KINDS: Array<Provider["kind"]> = ["ollama", "anthropic", "github_models", "opencode", "gh_copilot"];
 
@@ -25,10 +25,27 @@ const DEFAULT_BASE_URL: Record<string, string> = {
   github_models: "https://models.github.ai",
 };
 
+const HEALTH_LABEL: Record<NonNullable<Provider["last_health_status"]>, string> = {
+  ok: "ok",
+  unreachable: "unreachable",
+  unauthorized: "unauthorized",
+  "no-models": "no models",
+};
+
+const HEALTH_COLOR: Record<NonNullable<Provider["last_health_status"]>, "green" | "red" | "orange" | "gray"> = {
+  ok: "green",
+  unreachable: "red",
+  unauthorized: "orange",
+  "no-models": "gray",
+};
+
 export default function ProvidersPage() {
   const { data: providers = [] } = useProviders();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProviderInput | null>(null);
+  const [healthInfo, setHealthInfo] = useState<string | null>(null);
+  const [showHealthDetails, setShowHealthDetails] = useState(false);
+  const [refreshingHealth, setRefreshingHealth] = useState(false);
 
   const active = activeId ? providers.find((p) => p.id === activeId) ?? null : null;
 
@@ -41,6 +58,8 @@ export default function ProvidersPage() {
         config: active.config,
         enabled: active.enabled,
       });
+      setHealthInfo(active.last_health_error);
+      setShowHealthDetails(false);
     }
   }, [active?.id]);
 
@@ -74,6 +93,19 @@ export default function ProvidersPage() {
     await mutate("/api/providers");
   };
 
+  const refreshHealth = async () => {
+    if (!active) return;
+    setRefreshingHealth(true);
+    try {
+      const res = await api.get<ProviderHealth>(`/api/providers/${active.id}/health`);
+      setHealthInfo(res.error);
+      setShowHealthDetails(false);
+      await mutate("/api/providers");
+    } finally {
+      setRefreshingHealth(false);
+    }
+  };
+
   return (
     <PageShell
       sidebar={
@@ -83,7 +115,7 @@ export default function ProvidersPage() {
             id: p.id,
             primary: p.name,
             secondary: p.kind,
-            badge: p.enabled ? <Badge color="green">on</Badge> : <Badge color="gray">off</Badge>,
+            badge: <HealthBadge provider={p} />,
           }))}
           activeId={activeId}
           onSelect={setActiveId}
@@ -97,6 +129,11 @@ export default function ProvidersPage() {
         actions={
           draft ? (
             <Flex gap="2">
+              {active ? (
+                <Button variant="soft" onClick={refreshHealth} disabled={refreshingHealth}>
+                  {refreshingHealth ? "Refreshing..." : "Refresh health"}
+                </Button>
+              ) : null}
               {active ? (
                 <Button color="red" variant="soft" onClick={remove}>Delete</Button>
               ) : null}
@@ -152,6 +189,18 @@ export default function ProvidersPage() {
                 />
                 <Text size="2">Enabled</Text>
               </Flex>
+              {active ? (
+                <Field label="Health">
+                  <Flex direction="column" gap="1">
+                    <HealthBadge provider={active} onClick={() => setShowHealthDetails((v) => !v)} />
+                    {showHealthDetails ? (
+                      <Box style={{ border: "1px solid var(--gray-a6)", borderRadius: 8, padding: 8 }}>
+                        <Text size="1">{healthInfo || "No error reported by the last health probe."}</Text>
+                      </Box>
+                    ) : null}
+                  </Flex>
+                </Field>
+              ) : null}
               {active && ["ollama", "anthropic", "github_models"].includes(active.kind) ? (
                 <ProviderModelsPanel providerId={active.id} />
               ) : null}
@@ -167,6 +216,31 @@ export default function ProvidersPage() {
         <div className="empty-state">Select or create a provider</div>
       )}
     </PageShell>
+  );
+}
+
+function HealthBadge({ provider, onClick }: { provider: Provider; onClick?: () => void }) {
+  const status = provider.last_health_status;
+  const badge = !status ? (
+    <Badge color="gray" title="No health check yet">
+      unknown
+    </Badge>
+  ) : (
+    <Badge color={HEALTH_COLOR[status]} title={provider.last_health_error || ""}>
+      {HEALTH_LABEL[status]}
+    </Badge>
+  );
+
+  if (!onClick) return badge;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ background: "transparent", border: 0, padding: 0, margin: 0, cursor: "pointer" }}
+    >
+      {badge}
+    </button>
   );
 }
 

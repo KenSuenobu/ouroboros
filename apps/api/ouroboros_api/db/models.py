@@ -120,6 +120,9 @@ class Provider(Base, TimestampMixin):
     api_key_secret_ref: Mapped[str | None] = mapped_column(String(200))
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_health_status: Mapped[str | None] = mapped_column(String(32))
+    last_health_error: Mapped[str | None] = mapped_column(Text)
+    last_health_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     models: Mapped[list[ProviderModel]] = relationship(
         back_populates="provider", cascade="all, delete-orphan"

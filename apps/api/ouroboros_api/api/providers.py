@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -17,6 +18,7 @@ from .deps import db_session, workspace
 from .schemas import (
     ProviderChatRequest,
     ProviderChatResponse,
+    ProviderHealthOut,
     ProviderIn,
     ProviderModelOut,
     ProviderOut,
@@ -35,6 +37,9 @@ def _to_out(p: Provider) -> ProviderOut:
         has_api_key=bool(p.api_key_secret_ref),
         config=p.config,
         enabled=p.enabled,
+        last_health_status=p.last_health_status,
+        last_health_error=p.last_health_error,
+        last_health_checked_at=p.last_health_checked_at,
     )
 
 
@@ -52,6 +57,84 @@ def _resolve_model(p: Provider, model_id: str | None = None) -> ResolvedModel:
         api_key=api_key,
         extra=dict(p.config or {}),
     )
+
+
+def _error_text(response: httpx.Response) -> str:
+    text = response.text.strip()
+    if text:
+        return text[:1000]
+    return f"{response.status_code} {response.reason_phrase}"
+
+
+def _status_from_http_error(exc: Exception) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        if exc.response.status_code in {401, 403}:
+            return "unauthorized"
+        return "unreachable"
+    if isinstance(exc, httpx.RequestError):
+        return "unreachable"
+    return "unreachable"
+
+
+async def _probe_health(provider: Provider) -> tuple[str, str | None]:
+    resolved = _resolve_model(provider)
+    try:
+        if provider.kind == "ollama":
+            base_url = (provider.base_url or "http://localhost:11434").rstrip("/")
+            async with httpx.AsyncClient(base_url=base_url, timeout=10.0) as client:
+                res = await client.get("/api/tags")
+                res.raise_for_status()
+                models = (res.json() or {}).get("models", [])
+                if not models:
+                    return "no-models", "No models returned by /api/tags"
+                return "ok", None
+
+        if provider.kind == "anthropic":
+            base_url = (provider.base_url or "https://api.anthropic.com").rstrip("/")
+            headers = {
+                "x-api-key": resolved.api_key or "",
+                "anthropic-version": "2023-06-01",
+            }
+            async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=10.0) as client:
+                res = await client.head("/v1/messages")
+                if res.status_code in {401, 403}:
+                    return "unauthorized", _error_text(res)
+                if res.status_code >= 400 and res.status_code != 405:
+                    return "unreachable", _error_text(res)
+                return "ok", None
+
+        if provider.kind == "github_models":
+            base_url = (provider.base_url or "https://models.github.ai").rstrip("/")
+            headers = {
+                "Authorization": f"Bearer {resolved.api_key or ''}",
+                "Accept": "application/json",
+            }
+            async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=10.0) as client:
+                res = await client.get("/catalog/models")
+                if res.status_code in {401, 403}:
+                    return "unauthorized", _error_text(res)
+                res.raise_for_status()
+                models = res.json() or []
+                if not models:
+                    return "no-models", "No models returned by /catalog/models"
+                return "ok", None
+
+    except Exception as exc:
+        status = _status_from_http_error(exc)
+        if isinstance(exc, httpx.HTTPStatusError):
+            return status, _error_text(exc.response)
+        return status, str(exc)
+
+    return "ok", None
+
+
+async def _run_health_probe(provider: Provider) -> ProviderHealthOut:
+    status, error = await _probe_health(provider)
+    checked_at = datetime.now(UTC)
+    provider.last_health_status = status
+    provider.last_health_error = error
+    provider.last_health_checked_at = checked_at
+    return ProviderHealthOut(provider_id=provider.id, status=status, error=error, checked_at=checked_at)
 
 
 @router.get("", response_model=list[ProviderOut])
@@ -86,6 +169,7 @@ async def create_provider(
         ref = _secret_ref(ws.id, provider.id)
         secrets.set(ref, payload.api_key)
         provider.api_key_secret_ref = ref
+    await _run_health_probe(provider)
     await session.commit()
     await session.refresh(provider)
     return _to_out(provider)
@@ -122,6 +206,7 @@ async def update_provider(
         ref = provider.api_key_secret_ref or _secret_ref(ws.id, provider.id)
         secrets.set(ref, payload.api_key)
         provider.api_key_secret_ref = ref
+    await _run_health_probe(provider)
     await session.commit()
     await session.refresh(provider)
     return _to_out(provider)
@@ -155,6 +240,20 @@ async def list_models(
         select(ProviderModel).where(ProviderModel.provider_id == provider.id).order_by(ProviderModel.model_id)
     )
     return [ProviderModelOut.model_validate(m) for m in res.scalars()]
+
+
+@router.get("/{provider_id}/health", response_model=ProviderHealthOut)
+async def provider_health(
+    provider_id: str,
+    ws: Workspace = Depends(workspace),
+    session: AsyncSession = Depends(db_session),
+) -> ProviderHealthOut:
+    provider = await session.get(Provider, provider_id)
+    if not provider or provider.workspace_id != ws.id:
+        raise HTTPException(404, "Provider not found")
+    result = await _run_health_probe(provider)
+    await session.commit()
+    return result
 
 
 @router.post("/{provider_id}/models/refresh", response_model=list[ProviderModelOut])

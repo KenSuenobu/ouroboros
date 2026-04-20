@@ -10,6 +10,7 @@ import type {
   McpServer,
   Project,
   Provider,
+  ProviderHealth,
   ProviderModel,
   RoadmapEntry,
   Run,
@@ -28,6 +29,8 @@ export const useIssues = (projectId: string | null, state = "open") =>
 export const useRoadmap = (projectId: string | null) =>
   useSWR<RoadmapEntry[]>(projectId ? `/api/projects/${projectId}/roadmap` : null, fetcher);
 export const useProviders = () => useSWR<Provider[]>("/api/providers", fetcher);
+export const useProviderHealth = (providerId: string | null) =>
+  useSWR<ProviderHealth>(providerId ? `/api/providers/${providerId}/health` : null, fetcher);
 export const useProviderModels = (providerId: string | null) =>
   useSWR<ProviderModel[]>(providerId ? `/api/providers/${providerId}/models` : null, fetcher);
 export const useAgents = () => useSWR<Agent[]>("/api/agents", fetcher);

@@ -42,3 +42,113 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
 }
 
 .flow-wrapper { height: calc(100vh - 220px); border: 1px solid var(--gray-a5); border-radius: 8px; }
+
+.issue-markdown {
+  color: var(--gray-12);
+  line-height: 1.65;
+}
+
+.issue-markdown > :first-child {
+  margin-top: 0;
+}
+
+.issue-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.issue-markdown h1,
+.issue-markdown h2,
+.issue-markdown h3,
+.issue-markdown h4 {
+  color: var(--gray-12);
+  line-height: 1.25;
+  margin: 1rem 0 0.5rem;
+}
+
+.issue-markdown h1 { font-size: 1.5rem; }
+.issue-markdown h2 { font-size: 1.25rem; }
+.issue-markdown h3 { font-size: 1.1rem; }
+.issue-markdown h4 { font-size: 1rem; }
+
+.issue-markdown p {
+  margin: 0.6rem 0;
+  color: var(--gray-12);
+}
+
+.issue-markdown ul,
+.issue-markdown ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.issue-markdown li + li {
+  margin-top: 0.25rem;
+}
+
+.issue-markdown a {
+  color: var(--iris-11);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.issue-markdown a:hover {
+  color: var(--iris-10);
+}
+
+.issue-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  background: var(--gray-a3);
+  border: 1px solid var(--gray-a5);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+}
+
+.issue-markdown pre {
+  margin: 0.8rem 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--gray-a5);
+  background: var(--gray-a3);
+}
+
+.issue-markdown pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.issue-markdown blockquote {
+  margin: 0.8rem 0;
+  padding: 0.25rem 0 0.25rem 0.8rem;
+  border-left: 3px solid var(--gray-a6);
+  color: var(--gray-11);
+}
+
+.issue-markdown hr {
+  border: 0;
+  border-top: 1px solid var(--gray-a6);
+  margin: 1rem 0;
+}
+
+.issue-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8rem 0;
+  font-size: 0.9rem;
+}
+
+.issue-markdown th,
+.issue-markdown td {
+  border: 1px solid var(--gray-a6);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.issue-markdown th {
+  background: var(--gray-a3);
+  color: var(--gray-12);
+}

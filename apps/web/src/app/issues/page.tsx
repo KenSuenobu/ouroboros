@@ -213,6 +213,7 @@ export default function IssuesPage() {
             ) : null}
           </Flex>
           <Box
+            className="issue-markdown"
             style={{
               border: "1px solid var(--gray-a5)",
               borderRadius: 8,

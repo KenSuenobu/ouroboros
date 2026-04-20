@@ -2,6 +2,7 @@
 
 ## 2026-04-20
 
+- Fixes the react-markdown formatting in issues, which was not rendering properly.
 - Added true Monaco `DiffEditor` dry-run file diffs using sandbox originals and artifact proposed content, with a per-view side-by-side/unified toggle.
 - Added `GET /api/runs/{id}/sandbox-file?path=...` with sandbox path traversal protection and tests for both valid reads and `../../etc/passwd` rejection.
 

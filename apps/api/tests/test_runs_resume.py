@@ -117,7 +117,7 @@ async def test_resume_endpoint_starts_resume_task_for_interrupted_run(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         res = await client.post(f"/api/runs/{run.id}/resume")
 
-    assert res.status_code == 200
+    assert res.status_code == 202
     assert called == [run.id]
 
 

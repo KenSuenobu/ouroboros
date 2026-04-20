@@ -8,7 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..adapters.base import ResolvedModel, StepResult
@@ -503,19 +503,22 @@ def _snapshot_from_context(ctx: RunContext, run: Run) -> dict[str, Any]:
 
 async def interrupt_in_flight_runs(session: AsyncSession) -> int:
     now = datetime.now(UTC)
-    runs = list((await session.execute(select(Run).where(Run.status == "running"))).scalars())
-    for run in runs:
-        run.status = "interrupted"
-        if not run.finished_at:
-            run.finished_at = now
-    steps = list((await session.execute(select(RunStep).where(RunStep.status == "running"))).scalars())
-    for step in steps:
-        step.status = "interrupted"
-        if not step.finished_at:
-            step.finished_at = now
-    if runs or steps:
+    run_result = await session.execute(
+        update(Run)
+        .where(Run.status == "running")
+        .values(status="interrupted", finished_at=func.coalesce(Run.finished_at, now))
+        .execution_options(synchronize_session=False)
+    )
+    step_result = await session.execute(
+        update(RunStep)
+        .where(RunStep.status == "running")
+        .values(status="interrupted", finished_at=func.coalesce(RunStep.finished_at, now))
+        .execution_options(synchronize_session=False)
+    )
+    interrupted_count = run_result.rowcount
+    if interrupted_count or step_result.rowcount:
         await session.commit()
-    return len(runs)
+    return interrupted_count
 
 
 run_manager = RunEngine()

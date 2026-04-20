@@ -120,7 +120,7 @@ async def cancel_run(
     return {"cancelled": cancelled}
 
 
-@router.post("/{run_id}/resume", response_model=RunOut)
+@router.post("/{run_id}/resume", response_model=RunOut, status_code=202)
 async def resume_run(
     run_id: str,
     ws: Workspace = Depends(workspace),
@@ -133,8 +133,11 @@ async def resume_run(
         raise HTTPException(400, "Only interrupted runs can be resumed")
     if run_manager.is_running(run.id):
         raise HTTPException(409, "Run is already active")
-    await run_manager.resume(run.id)
+    run.status = "running"
+    run.finished_at = None
+    await session.commit()
     await session.refresh(run)
+    await run_manager.resume(run.id)
     return RunOut.model_validate(run)
 
 

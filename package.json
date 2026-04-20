@@ -14,7 +14,7 @@
     "clean": "turbo run clean && rm -rf .turbo node_modules",
     "format": "turbo run format"
   },
-  "packageManager": "yarn@4.5.3",
+  "packageManager": "yarn@4.14.0",
   "devDependencies": {
     "turbo": "^2.3.3"
   },

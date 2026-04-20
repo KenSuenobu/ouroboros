@@ -53,6 +53,11 @@ class ProjectOut(ProjectIn):
     updated_at: datetime
 
 
+class ProjectIntrospectionOut(_Base):
+    build: list[str] = Field(default_factory=list)
+    test: list[str] = Field(default_factory=list)
+
+
 class IssueOut(_Base):
     id: str
     project_id: str

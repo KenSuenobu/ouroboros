@@ -12,7 +12,7 @@ import {
 } from "@radix-ui/themes";
 import { PageShell, PageHeader } from "@/components/layout/page-shell";
 import { SidebarList } from "@/components/common/sidebar-list";
-import { useProjects } from "@/lib/api/hooks";
+import { useProjectIntrospection, useProjects } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Project, ProjectInput } from "@/lib/api/types";
 import { mutate } from "swr";
@@ -33,6 +33,7 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProjectInput | null>(null);
+  const { data: introspection } = useProjectIntrospection(activeId);
 
   const active = activeId ? projects.find((p) => p.id === activeId) ?? null : null;
   const editing = draft ?? (active as ProjectInput | null);
@@ -129,6 +130,13 @@ export default function ProjectsPage() {
                   value={editing.build_command || ""}
                   onChange={(e) => update({ build_command: e.target.value || null })}
                 />
+                {active ? (
+                  <SuggestionChips
+                    commands={introspection?.build ?? []}
+                    current={editing.build_command}
+                    onUse={(command) => update({ build_command: command })}
+                  />
+                ) : null}
               </Field>
               <Field label="Test command" style={{ flex: 1 }}>
                 <TextField.Root
@@ -136,6 +144,13 @@ export default function ProjectsPage() {
                   value={editing.test_command || ""}
                   onChange={(e) => update({ test_command: e.target.value || null })}
                 />
+                {active ? (
+                  <SuggestionChips
+                    commands={introspection?.test ?? []}
+                    current={editing.test_command}
+                    onUse={(command) => update({ test_command: command })}
+                  />
+                ) : null}
               </Field>
             </Flex>
             <Field label="Config (JSON, advanced)">
@@ -157,6 +172,31 @@ export default function ProjectsPage() {
         <div className="empty-state">Select or create a project</div>
       )}
     </PageShell>
+  );
+}
+
+function SuggestionChips({
+  commands,
+  current,
+  onUse,
+}: {
+  commands: string[];
+  current: string | null;
+  onUse: (command: string) => void;
+}) {
+  const options = commands.filter((command) => command !== current);
+  if (!options.length) return null;
+  return (
+    <Flex mt="2" gap="2" wrap="wrap" align="center">
+      <Text size="1" color="gray">
+        Suggestions
+      </Text>
+      {options.map((command) => (
+        <Button key={command} size="1" variant="soft" onClick={() => onUse(command)}>
+          Use this: {command}
+        </Button>
+      ))}
+    </Flex>
   );
 }
 

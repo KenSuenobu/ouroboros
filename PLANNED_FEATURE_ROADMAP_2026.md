@@ -17,6 +17,7 @@ Legend
 Completed
 - #67 - Added system-aware light/dark mode with a top-right header toggle in the web app.
 - #7 - Added a first-run onboarding wizard for workspace setup, initial project connection, and first provider setup.
+- #9 - Added repository command introspection to suggest build/test commands in the project editor.
 
 ---
 
@@ -34,7 +35,6 @@ Completed
 | #     | Issue                                                                                          | Tier | Notes                                                    |
 |-------|------------------------------------------------------------------------------------------------|------|----------------------------------------------------------|
 | #8 | Healthcheck panel: ping each configured provider, surface "needs key" / "ollama unreachable"   | MVP  | New `GET /api/providers/{id}/health` and a `/health` page       |
-| #9 | Auto-detect repo `build`/`test` commands (package.json scripts, pyproject sections, Makefile)  | MVP  | Pre-fills Project commands so first run "just works"             |
 | #10 | Improved router default policy (per-language) baked into seed agents, not just `coder`         | MVP  | Currently only the `coder` agent has language hints              |
 | #11 | Real-time stderr/stdout streaming for shell steps (not just final blob)                        | MVP  | New `step.log` events on the WebSocket bus                       |
 | #12 | Persisted `.env` for `OUROBOROS_DB_URL` etc. via `ouroboros init` CLI                          | MVP  | Today envs are read but never written for the user               |

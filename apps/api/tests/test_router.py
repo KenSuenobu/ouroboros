@@ -35,7 +35,9 @@ def _model(pid: str, mid: str) -> SimpleNamespace:
 
 
 def _seed_policy(role: str) -> dict:
-    spec = next(agent for agent in DEFAULT_AGENTS if agent["role"] == role)
+    spec = next((agent for agent in DEFAULT_AGENTS if agent["role"] == role), None)
+    if spec is None:
+        raise AssertionError(f"Missing default agent seed for role: {role}")
     return spec["model_policy"]
 
 

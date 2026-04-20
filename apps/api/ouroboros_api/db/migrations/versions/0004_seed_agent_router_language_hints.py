@@ -43,11 +43,14 @@ LANGUAGE_MAP_BY_ROLE = {
 def _needs_router_hints_update(policy: dict[str, Any]) -> bool:
     if (policy or {}).get("kind") != "router":
         return False
-    hints = (policy.get("router_hints") or {}) if isinstance(policy, dict) else {}
-    # Preserve existing language map customizations.
-    if not isinstance(hints, dict):
+    raw_hints = policy.get("router_hints") if isinstance(policy, dict) else None
+    # Preserve existing router_hints customizations, including malformed values.
+    # Only backfill when router_hints is missing or a dict without language_map.
+    if raw_hints is None:
         return True
-    return not hints.get("language_map")
+    if not isinstance(raw_hints, dict):
+        return False
+    return "language_map" not in raw_hints
 
 
 def upgrade() -> None:

@@ -78,9 +78,15 @@ export type Provider = {
   has_api_key: boolean;
   config: Record<string, unknown>;
   enabled: boolean;
+  last_health_status: "ok" | "unreachable" | "unauthorized" | "no-models" | "unsupported" | null;
+  last_health_error: string | null;
+  last_health_checked_at: string | null;
 };
 
-export type ProviderInput = Omit<Provider, "id" | "workspace_id" | "has_api_key"> & {
+export type ProviderInput = Omit<
+  Provider,
+  "id" | "workspace_id" | "has_api_key" | "last_health_status" | "last_health_error" | "last_health_checked_at"
+> & {
   api_key?: string;
 };
 
@@ -94,6 +100,13 @@ export type ProviderModel = {
   input_cost_per_mtok: number | null;
   output_cost_per_mtok: number | null;
   last_seen_at: string | null;
+};
+
+export type ProviderHealth = {
+  provider_id: string;
+  status: "ok" | "unreachable" | "unauthorized" | "no-models" | "unsupported";
+  error: string | null;
+  checked_at: string;
 };
 
 export type ModelPolicy = {

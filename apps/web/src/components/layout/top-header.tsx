@@ -12,6 +12,7 @@ import {
   Boxes,
   Workflow,
   Infinity as InfinityIcon,
+  HeartPulse,
   Moon,
   Sun,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const NAV: Array<{ href: string; label: string; Icon: typeof FolderTree }> = [
   { href: "/runs", label: "Runs", Icon: Activity },
   { href: "/agents", label: "Agents", Icon: Bot },
   { href: "/providers", label: "Providers", Icon: Plug },
+  { href: "/health", label: "Health", Icon: HeartPulse },
   { href: "/mcp", label: "MCP", Icon: Boxes },
   { href: "/routing", label: "Routing", Icon: Workflow },
 ];

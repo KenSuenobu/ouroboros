@@ -107,6 +107,16 @@ class ProviderOut(_Base):
     has_api_key: bool = False
     config: dict[str, Any] = Field(default_factory=dict)
     enabled: bool
+    last_health_status: str | None = None
+    last_health_error: str | None = None
+    last_health_checked_at: datetime | None = None
+
+
+class ProviderHealthOut(_Base):
+    provider_id: str
+    status: str
+    error: str | None = None
+    checked_at: datetime
 
 
 class ProviderModelOut(_Base):

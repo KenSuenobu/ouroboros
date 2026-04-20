@@ -247,7 +247,16 @@ function StepRow({ step }: { step: RunStep; active: boolean }) {
 }
 
 function StepDetail({ runId, step, events }: { runId: string; step: RunStep; events: RunEvent[] }) {
-  const [artifacts, setArtifacts] = useState<Array<{ id: string; kind: string; name: string; inline_content: string | null }>>([]);
+  const [artifacts, setArtifacts] = useState<
+    Array<{
+      id: string;
+      kind: string;
+      name: string;
+      inline_content: string | null;
+      path?: string | null;
+      meta?: Record<string, unknown>;
+    }>
+  >([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -287,7 +296,7 @@ function StepDetail({ runId, step, events }: { runId: string; step: RunStep; eve
                 </Flex>
                 {a.kind === "file_diff" ? (
                   <Box style={{ height: 200, marginTop: 6 }}>
-                    <MonacoDiff original="" modified={a.inline_content || ""} language="diff" />
+                    <FileDiffArtifact runId={runId} artifact={a} />
                   </Box>
                 ) : (
                   <pre style={{ margin: 0, fontSize: 12, maxHeight: 220, overflow: "auto", whiteSpace: "pre-wrap" }}>
@@ -301,4 +310,92 @@ function StepDetail({ runId, step, events }: { runId: string; step: RunStep; eve
       )}
     </Box>
   );
+}
+
+function FileDiffArtifact({
+  runId,
+  artifact,
+}: {
+  runId: string;
+  artifact: { path?: string | null; inline_content: string | null; meta?: Record<string, unknown> };
+}) {
+  const [originalContent, setOriginalContent] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const path = artifact.path || (typeof artifact.meta?.path === "string" ? artifact.meta.path : null);
+
+  useEffect(() => {
+    let alive = true;
+    if (!path) {
+      setError("Missing file path for diff artifact.");
+      return () => {
+        alive = false;
+      };
+    }
+    setError(null);
+    api
+      .get<{ content: string }>(`/api/runs/${runId}/sandbox-file?path=${encodeURIComponent(path)}`)
+      .then((payload) => {
+        if (!alive) return;
+        setOriginalContent(payload.content || "");
+      })
+      .catch((err: unknown) => {
+        if (!alive) return;
+        // A 404 means the file didn't exist before (e.g. newly-added file).
+        // Fall back to an empty original so the diff still renders correctly.
+        const message = err instanceof Error ? err.message : "";
+        if (message.startsWith("404:")) {
+          setOriginalContent("");
+          return;
+        }
+        setError(message || "Failed to load original file");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [path, runId]);
+
+  if (error) {
+    return (
+      <Box style={{ marginTop: 6 }}>
+        <Text size="1" color="red">{error}</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      {artifact.meta?.truncated && (
+        <Box style={{ marginBottom: 4 }}>
+          <Text size="1" color="orange">
+            Proposed file content was too large and has been truncated to the last 20,000 characters.
+          </Text>
+        </Box>
+      )}
+      <MonacoDiff
+        original={originalContent}
+        modified={artifact.inline_content || ""}
+        language={inferLanguageFromPath(path)}
+        showModeToggle
+      />
+    </>
+  );
+}
+
+function inferLanguageFromPath(path?: string | null): string {
+  const ext = path?.split(".").pop()?.toLowerCase();
+  const byExtension: Record<string, string> = {
+    ts: "typescript",
+    tsx: "typescript",
+    js: "javascript",
+    jsx: "javascript",
+    py: "python",
+    md: "markdown",
+    json: "json",
+    yml: "yaml",
+    yaml: "yaml",
+    css: "css",
+    html: "html",
+    sh: "shell",
+  };
+  return ext ? byExtension[ext] || "plaintext" : "plaintext";
 }

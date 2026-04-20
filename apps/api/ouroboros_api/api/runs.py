@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import select
@@ -25,6 +27,21 @@ from .schemas import (
 )
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
+
+
+def _resolve_sandbox_file_path(run: Run, rel_path: str) -> Path:
+    if not rel_path or not rel_path.strip():
+        raise HTTPException(400, "path is required")
+    if not run.sandbox_path:
+        raise HTTPException(404, "Sandbox is not available for this run")
+
+    sandbox_root = Path(run.sandbox_path).resolve()
+    target = (sandbox_root / rel_path).resolve()
+    try:
+        target.relative_to(sandbox_root)
+    except ValueError as exc:
+        raise HTTPException(400, "path escapes sandbox") from exc
+    return target
 
 
 @router.get("", response_model=list[RunOut])
@@ -284,6 +301,28 @@ async def summary_markdown(
     return PlainTextResponse("\n".join(lines))
 
 
+@router.get("/{run_id}/sandbox-file")
+async def sandbox_file(
+    run_id: str,
+    path: str,
+    ws: Workspace = Depends(workspace),
+    session: AsyncSession = Depends(db_session),
+) -> dict[str, str]:
+    run = await session.get(Run, run_id)
+    if not run or run.workspace_id != ws.id:
+        raise HTTPException(404, "Run not found")
+    target = _resolve_sandbox_file_path(run, path)
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found in sandbox")
+    try:
+        content = await anyio.to_thread.run_sync(
+            lambda: target.read_text(encoding="utf-8")
+        )
+    except UnicodeDecodeError as exc:
+        raise HTTPException(400, "File is not valid UTF-8 text") from exc
+    return {"path": path, "content": content}
+
+
 @router.get("/{run_id}/audit")
 async def run_audit(
     run_id: str,
@@ -358,6 +397,7 @@ async def step_artifacts(
             "inline_content": a.inline_content,
             "content_ref": a.content_ref,
             "meta": a.meta,
+            "path": (a.meta or {}).get("path") or (a.name if a.kind == "file_diff" else None),
             "created_at": a.created_at.isoformat() if a.created_at else None,
         }
         for a in res.scalars()

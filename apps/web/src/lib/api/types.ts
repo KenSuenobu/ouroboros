@@ -1,6 +1,22 @@
 // Type mirrors of the FastAPI Pydantic schemas. Kept handwritten so we don't need codegen at boot.
 
-export type Workspace = { id: string; slug: string; name: string; created_at: string };
+export type Workspace = {
+  id: string;
+  slug: string;
+  name: string;
+  onboarding_completed_at: string | null;
+  created_at: string;
+};
+
+export type WorkspaceOnboardingStatus = {
+  id: string;
+  slug: string;
+  name: string;
+  onboarding_completed_at: string | null;
+  project_count: number;
+  provider_count: number;
+  requires_onboarding: boolean;
+};
 
 export type Project = {
   id: string;

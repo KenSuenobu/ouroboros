@@ -14,11 +14,14 @@ import type {
   RoadmapEntry,
   Run,
   RunDetail,
+  WorkspaceOnboardingStatus,
 } from "./types";
 
 const fetcher = <T,>(path: string) => api.get<T>(path);
 
 export const useProjects = () => useSWR<Project[]>("/api/projects", fetcher);
+export const useWorkspaceOnboarding = () =>
+  useSWR<WorkspaceOnboardingStatus>("/api/workspaces/me", fetcher);
 export const useProject = (id: string | null) => useSWR<Project>(id ? `/api/projects/${id}` : null, fetcher);
 export const useIssues = (projectId: string | null, state = "open") =>
   useSWR<Issue[]>(projectId ? `/api/projects/${projectId}/issues?state=${state}` : null, fetcher);

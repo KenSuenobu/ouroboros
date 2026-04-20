@@ -42,6 +42,7 @@ class Workspace(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class Project(Base, TimestampMixin):

@@ -15,7 +15,6 @@ from ..config import settings
 from ..db.models import Project
 
 _TARGET_FILES = ("package.json", "pyproject.toml", "Makefile", "Cargo.toml", "go.mod")
-_TARGET_FILE_SET = set(_TARGET_FILES)
 
 
 @dataclass(slots=True)
@@ -41,7 +40,7 @@ def _resolve_repo_root(project: Project) -> Path | None:
         if candidate.exists():
             return candidate
     cached = settings.data_dir / "introspect-cache" / project.id
-    if cached.exists():
+    if cached.exists() and (cached / ".git").exists():
         return cached
     return None
 
@@ -52,13 +51,22 @@ def _shallow_clone(project: Project) -> Path | None:
     if target.exists():
         shutil.rmtree(target)
 
-    cmd = ["git", "clone", "--depth", "1"]
+    # protocol.file.allow=never requires Git >= 2.38.0 (Oct 2022)
+    cmd = ["git", "-c", "protocol.file.allow=never", "clone", "--depth", "1"]
     if project.default_branch:
         cmd.extend(["--branch", project.default_branch])
-    cmd.extend([project.repo_url, str(target)])
+    cmd.extend(["--", project.repo_url, str(target)])
     try:
-        subprocess.run(cmd, check=True, capture_output=True)
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=60,
+        )
     except Exception:
+        if target.exists():
+            shutil.rmtree(target)
         return None
     return target
 
@@ -70,7 +78,10 @@ def _safe_read_text(path: Path) -> str:
 def _load_toml(path: Path) -> dict[str, Any]:
     import tomllib
 
-    return tomllib.loads(_safe_read_text(path))
+    try:
+        return tomllib.loads(_safe_read_text(path))
+    except tomllib.TOMLDecodeError:
+        return {}
 
 
 def _normalize_test_script(script: str) -> str:
@@ -83,7 +94,10 @@ def _normalize_test_script(script: str) -> str:
 
 
 def _suggest_from_package_json(path: Path, suggestions: RepoCommandSuggestions) -> None:
-    data = json.loads(_safe_read_text(path))
+    try:
+        data = json.loads(_safe_read_text(path))
+    except json.JSONDecodeError:
+        return
     scripts = data.get("scripts")
     if not isinstance(scripts, dict):
         return

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,5 +91,7 @@ async def introspect_project(
     session: AsyncSession = Depends(db_session),
 ) -> ProjectIntrospectionOut:
     project = await _project_or_404(project_id, ws, session)
-    suggestions = introspect_project_commands(project)
+    suggestions = await anyio.to_thread.run_sync(
+        lambda: introspect_project_commands(project)
+    )
     return ProjectIntrospectionOut(**suggestions.as_dict())

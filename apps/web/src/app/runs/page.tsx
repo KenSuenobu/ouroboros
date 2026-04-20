@@ -11,6 +11,7 @@ import type { Run } from "@/lib/api/types";
 const STATUS_COLORS: Record<string, "gray" | "green" | "red" | "amber" | "iris"> = {
   pending: "gray",
   running: "iris",
+  interrupted: "amber",
   succeeded: "green",
   failed: "red",
   cancelled: "amber",

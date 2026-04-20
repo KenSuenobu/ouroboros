@@ -8,7 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..adapters.base import ResolvedModel, StepResult
@@ -50,7 +50,13 @@ class RunEngine:
     async def start(self, run_id: str) -> None:
         if self.is_running(run_id):
             return
-        task = asyncio.create_task(self._safe_execute(run_id), name=f"run:{run_id}")
+        task = asyncio.create_task(self._safe_execute(run_id, resume=False), name=f"run:{run_id}")
+        self._tasks[run_id] = task
+
+    async def resume(self, run_id: str) -> None:
+        if self.is_running(run_id):
+            return
+        task = asyncio.create_task(self._safe_execute(run_id, resume=True), name=f"run:{run_id}")
         self._tasks[run_id] = task
 
     async def cancel(self, run_id: str) -> bool:
@@ -60,9 +66,9 @@ class RunEngine:
             return True
         return False
 
-    async def _safe_execute(self, run_id: str) -> None:
+    async def _safe_execute(self, run_id: str, *, resume: bool) -> None:
         try:
-            await self._execute(run_id)
+            await self._execute(run_id, resume=resume)
         except Exception as exc:
             log.exception("run %s failed at top level", run_id)
             await bus.publish(RunEvent(run_id=run_id, type="run.failed", payload={"error": str(exc)}))
@@ -74,7 +80,7 @@ class RunEngine:
                     run.finished_at = datetime.now(UTC)
                     await session.commit()
 
-    async def _execute(self, run_id: str) -> None:
+    async def _execute(self, run_id: str, *, resume: bool = False) -> None:
         async with SessionLocal() as session:
             run = await session.get(Run, run_id)
             if not run:
@@ -101,8 +107,12 @@ class RunEngine:
             )
             agents_by_role = {a.role: a for a in agents_list}
 
+            if run.status == "succeeded":
+                return
             run.status = "running"
-            run.started_at = datetime.now(UTC)
+            if not run.started_at:
+                run.started_at = datetime.now(UTC)
+            run.finished_at = None
             await session.commit()
 
             await bus.publish(RunEvent(run_id=run.id, type="run.started", payload={"dry_run": run.dry_run}))
@@ -129,6 +139,7 @@ class RunEngine:
                 project=project,
                 run=run,
             )
+            _restore_context_from_snapshot(ctx, run.snapshot_json if resume else None)
 
             graph = flow.graph or {}
             nodes_by_id = {n["id"]: n for n in graph.get("nodes", [])}
@@ -136,13 +147,34 @@ class RunEngine:
             execution_order = _topological_order(graph)
 
             run.plan = {"nodes": graph.get("nodes", []), "edges": edges}
+            run.snapshot_json = _snapshot_from_context(ctx, run)
             await session.commit()
             await bus.publish(RunEvent(run_id=run.id, type="plan.ready", payload=run.plan))
 
-            sequence = 0
+            existing_steps = list(
+                (
+                    await session.execute(select(RunStep).where(RunStep.run_id == run.id).order_by(RunStep.sequence))
+                ).scalars()
+            )
+            if resume:
+                for step in existing_steps:
+                    if step.status == "running":
+                        step.status = "interrupted"
+                        if not step.finished_at:
+                            step.finished_at = datetime.now(UTC)
+                await session.commit()
+
+            sequence = max((s.sequence for s in existing_steps), default=0)
             attempts: dict[str, int] = {}
+            completed_node_ids = {
+                step.node_id for step in existing_steps if step.status == "succeeded"
+            }
+            for step in existing_steps:
+                attempts[step.node_id] = max(attempts.get(step.node_id, 0), step.attempt)
 
             for node_id in execution_order:
+                if node_id in completed_node_ids:
+                    continue
                 node = nodes_by_id[node_id]
                 attempts[node_id] = attempts.get(node_id, 0) + 1
                 sequence += 1
@@ -161,6 +193,7 @@ class RunEngine:
 
             run.status = "succeeded"
             run.finished_at = datetime.now(UTC)
+            run.snapshot_json = _snapshot_from_context(ctx, run)
             await session.commit()
             await bus.publish(RunEvent(run_id=run.id, type="run.finished", payload={"status": "succeeded"}))
 
@@ -211,12 +244,10 @@ class RunEngine:
         if node_type == "wait_for_user":
             answer = await self._wait_for_user(session, run, step, node)
             ctx.scratchpad.setdefault("interventions", []).append({"node": node_id, "answer": answer})
-            return await self._finish_step(session, run, step, StepResult(summary="user input received"))
+            return await self._finish_step(session, run, step, StepResult(summary="user input received"), ctx)
 
         if node_type != "agent":
-            return await self._finish_step(
-                session, run, step, StepResult(summary=f"node type {node_type!r} ignored")
-            )
+            return await self._finish_step(session, run, step, StepResult(summary=f"node type {node_type!r} ignored"), ctx)
 
         if not agent:
             return await self._finish_step(
@@ -224,6 +255,7 @@ class RunEngine:
                 run,
                 step,
                 StepResult(summary=f"agent for role {node.get('agent_role')!r} not found", failed=True, error="missing agent"),
+                ctx,
             )
 
         provider_model = pick_model(
@@ -235,6 +267,7 @@ class RunEngine:
                 run,
                 step,
                 StepResult(summary="no provider/model available", failed=True, error="no usable provider"),
+                ctx,
             )
         provider = provider_model[0] if provider_model else None
         chosen_model = provider_model[1] if provider_model else None
@@ -253,7 +286,7 @@ class RunEngine:
             adapter = adapters().get(agent.execution_adapter)
         except KeyError as exc:
             return await self._finish_step(
-                session, run, step, StepResult(summary="bad adapter", failed=True, error=str(exc))
+                session, run, step, StepResult(summary="bad adapter", failed=True, error=str(exc)), ctx
             )
 
         async def _publish_step_log(stream: str, line: str) -> None:
@@ -281,7 +314,9 @@ class RunEngine:
                 chosen_model.output_cost_per_mtok,
             )
 
-        ok = await self._finish_step(session, run, step, result, provider_id=resolved.provider_id or None)
+        ok = await self._finish_step(
+            session, run, step, result, ctx, provider_id=resolved.provider_id or None
+        )
         if not ok and attempt < MAX_STEP_RETRIES and (agent.config or {}).get("retry_on_failure", True):
             await bus.publish(
                 RunEvent(run_id=run.id, type="step.retry", payload={"node_id": node_id, "attempt": attempt + 1})
@@ -306,6 +341,7 @@ class RunEngine:
         run: Run,
         step: RunStep,
         result: StepResult,
+        ctx: RunContext,
         *,
         provider_id: str | None = None,
     ) -> bool:
@@ -335,6 +371,7 @@ class RunEngine:
         run.total_tokens_in += result.tokens_in
         run.total_tokens_out += result.tokens_out
         run.cost_estimate_usd += result.cost_usd
+        run.snapshot_json = _snapshot_from_context(ctx, run)
         await session.commit()
 
         await bus.publish(
@@ -368,6 +405,7 @@ class RunEngine:
             run.status = "failed"
             run.error = result.error
             run.finished_at = datetime.now(UTC)
+            run.snapshot_json = _snapshot_from_context(ctx, run)
             await session.commit()
             await bus.publish(
                 RunEvent(run_id=run.id, type="run.failed", payload={"error": result.error, "node_id": step.node_id})
@@ -443,6 +481,44 @@ def _topological_order(graph: dict[str, Any]) -> list[str]:
         if n not in order:
             order.append(n)
     return order
+
+
+def _restore_context_from_snapshot(ctx: RunContext, snapshot: dict[str, Any] | None) -> None:
+    payload = snapshot or {}
+    issue = payload.get("issue")
+    scratchpad = payload.get("scratchpad")
+    if isinstance(issue, dict):
+        ctx.issue = issue
+    if isinstance(scratchpad, dict):
+        ctx.scratchpad = dict(scratchpad)
+
+
+def _snapshot_from_context(ctx: RunContext, run: Run) -> dict[str, Any]:
+    return {
+        "issue": ctx.issue or {},
+        "scratchpad": ctx.scratchpad,
+        "override_models": run.override_models or {},
+    }
+
+
+async def interrupt_in_flight_runs(session: AsyncSession) -> int:
+    now = datetime.now(UTC)
+    run_result = await session.execute(
+        update(Run)
+        .where(Run.status == "running")
+        .values(status="interrupted", finished_at=func.coalesce(Run.finished_at, now))
+        .execution_options(synchronize_session=False)
+    )
+    step_result = await session.execute(
+        update(RunStep)
+        .where(RunStep.status == "running")
+        .values(status="interrupted", finished_at=func.coalesce(RunStep.finished_at, now))
+        .execution_options(synchronize_session=False)
+    )
+    interrupted_count = run_result.rowcount
+    if interrupted_count or step_result.rowcount:
+        await session.commit()
+    return interrupted_count
 
 
 run_manager = RunEngine()

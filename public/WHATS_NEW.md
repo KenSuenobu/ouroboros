@@ -1,5 +1,6 @@
 # What's New
 
+- Added interrupted-run recovery with persisted run snapshots, automatic startup sweep from `running` to `interrupted`, and a Resume action in run details to continue from the first unfinished step.
 - Added `ouroboros init` to scaffold `.env` and `.env.example` with default `OUROBOROS_DATA_DIR` and `OUROBOROS_DB_URL` values for first-run setup.
 - Added real-time shell step log streaming with per-step live log panes in the run detail timeline.
 - Added system-aware light/dark mode support with a top-right toggle in the web application header.

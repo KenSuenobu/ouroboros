@@ -17,6 +17,7 @@ const MonacoDiff = dynamic(() => import("@/components/editors/diff-viewer").then
 const STATUS_COLOR: Record<string, "gray" | "iris" | "green" | "red" | "amber"> = {
   pending: "gray",
   running: "iris",
+  interrupted: "amber",
   succeeded: "green",
   failed: "red",
   cancelled: "amber",
@@ -75,6 +76,12 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
     window.location.href = `/runs/${fresh.id}`;
   };
 
+  const resume = async () => {
+    await api.post<Run>(`/api/runs/${id}/resume`);
+    await mutate(`/api/runs/${id}`);
+    await mutate("/api/runs");
+  };
+
   const submitIntervention = async () => {
     if (!intervention) return;
     await api.post(`/api/runs/${id}/interventions/${intervention.id}`, { answer: { text: answer } });
@@ -107,6 +114,9 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
             <Flex gap="2">
               {run.status === "running" ? (
                 <Button color="amber" variant="soft" onClick={cancel}>Cancel</Button>
+              ) : null}
+              {run.status === "interrupted" ? (
+                <Button color="amber" onClick={resume}>Resume</Button>
               ) : null}
               <Button
                 variant="soft"

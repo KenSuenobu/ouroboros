@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import shlex
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +32,9 @@ SIDE_EFFECT_PATTERNS = (
 
 BUILD_PATTERNS = ("npm run build", "yarn build", "pnpm build", "uv build", "make build", "cargo build")
 TEST_PATTERNS = ("npm test", "yarn test", "pnpm test", "uv run pytest", "pytest", "make test", "cargo test")
+
+LineSink = Callable[[str, str], Awaitable[None] | None]
+_SHELL_LINE_SINK: ContextVar[LineSink | None] = ContextVar("shell_line_sink", default=None)
 
 
 def classify_command(cmd: str) -> str:
@@ -59,6 +66,57 @@ class ShellResult:
         return not self.blocked and self.exit_code == 0
 
 
+@contextmanager
+def shell_line_subscriber(sink: LineSink) -> Iterator[None]:
+    """Temporarily subscribe to stdout/stderr lines emitted by run_shell."""
+    token = _SHELL_LINE_SINK.set(sink)
+    try:
+        yield
+    finally:
+        _SHELL_LINE_SINK.reset(token)
+
+
+async def iter_process_lines(proc: asyncio.subprocess.Process) -> AsyncIterator[tuple[str, str]]:
+    """Yield process output as (stream, line) tuples in near real-time."""
+    if proc.stdout is None or proc.stderr is None:
+        return
+
+    queue: asyncio.Queue[tuple[str, str | None]] = asyncio.Queue(maxsize=1000)
+
+    async def _pump(reader: asyncio.StreamReader, stream: str) -> None:
+        try:
+            while True:
+                line = await reader.readline()
+                if not line:
+                    break
+                await queue.put((stream, line.decode("utf-8", errors="replace")))
+        finally:
+            await queue.put((stream, None))
+
+    stdout_task = asyncio.create_task(_pump(proc.stdout, "stdout"))
+    stderr_task = asyncio.create_task(_pump(proc.stderr, "stderr"))
+    try:
+        done = 0
+        while done < 2:
+            stream, line = await queue.get()
+            if line is None:
+                done += 1
+                continue
+            yield (stream, line)
+    finally:
+        stdout_task.cancel()
+        stderr_task.cancel()
+        await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
+
+
+async def _emit_line(sink: LineSink | None, stream: str, line: str) -> None:
+    if sink is None:
+        return
+    maybe_awaitable = sink(stream, line)
+    if inspect.isawaitable(maybe_awaitable):
+        await maybe_awaitable
+
+
 async def run_shell(
     cmd: str,
     *,
@@ -67,6 +125,7 @@ async def run_shell(
     env: dict[str, str] | None = None,
     timeout: float = 600.0,
     allow_side_effect: bool = False,
+    on_line: LineSink | None = None,
 ) -> ShellResult:
     classification = classify_command(cmd)
     if dry_run and classification == "side_effect" and not allow_side_effect:
@@ -89,11 +148,24 @@ async def run_shell(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+    sink = on_line or _SHELL_LINE_SINK.get()
+    stdout_parts: list[str] = []
+    stderr_parts: list[str] = []
+
+    async def _collect_lines() -> None:
+        async for stream, line in iter_process_lines(proc):
+            if stream == "stdout":
+                stdout_parts.append(line)
+            else:
+                stderr_parts.append(line)
+            await _emit_line(sink, stream, line)
+        await proc.wait()
+
     try:
-        out, err = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        await asyncio.wait_for(_collect_lines(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        await proc.communicate()
+        await proc.wait()
         return ShellResult(
             cmd=cmd,
             classification=classification,
@@ -104,11 +176,19 @@ async def run_shell(
             blocked=True,
             reason="timeout",
         )
+    except asyncio.CancelledError:
+        proc.terminate()
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+        raise
     return ShellResult(
         cmd=cmd,
         classification=classification,
         cwd=str(cwd),
         exit_code=proc.returncode or 0,
-        stdout=out.decode("utf-8", errors="replace"),
-        stderr=err.decode("utf-8", errors="replace"),
+        stdout="".join(stdout_parts),
+        stderr="".join(stderr_parts),
     )

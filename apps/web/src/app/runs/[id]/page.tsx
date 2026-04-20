@@ -4,10 +4,11 @@ import { use, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Badge, Box, Button, Dialog, Flex, Tabs, Text, TextField } from "@radix-ui/themes";
 import { PageShell, PageHeader } from "@/components/layout/page-shell";
+import { LogPane } from "@/components/runs/log-pane";
 import { useRun } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import { useRunStream } from "@/lib/ws/use-run-stream";
-import type { Intervention, Run, RunStep } from "@/lib/api/types";
+import type { Intervention, Run, RunEvent, RunStep } from "@/lib/api/types";
 import { mutate } from "swr";
 
 const PlanFlow = dynamic(() => import("@/components/flow/run-plan-flow").then((m) => m.RunPlanFlow), { ssr: false });
@@ -48,11 +49,18 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
     };
   }, [id, events.length]);
 
-  const stepEventsById = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof Object> | unknown>();
+  const eventsByStepId = useMemo(() => {
+    const map = new Map<string, RunEvent[]>();
     for (const evt of events) {
       const stepId = (evt.payload?.step_id as string) || "";
-      if (stepId) map.set(stepId, evt);
+      if (stepId) {
+        const arr = map.get(stepId);
+        if (arr) {
+          arr.push(evt);
+        } else {
+          map.set(stepId, [evt]);
+        }
+      }
     }
     return map;
   }, [events]);
@@ -142,7 +150,7 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
           <Tabs.Content value="timeline">
             <Flex direction="column" gap="3">
               {(run?.steps || []).map((step) => (
-                <StepDetail key={step.id} runId={id} step={step} />
+                <StepDetail key={step.id} runId={id} step={step} events={eventsByStepId.get(step.id) || []} />
               ))}
             </Flex>
           </Tabs.Content>
@@ -191,9 +199,6 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
         </Dialog.Content>
       </Dialog.Root>
 
-      {/* avoids lint warning */}
-      {stepEventsById.size > -1 ? null : null}
-
       <_MonacoPreload />
     </PageShell>
   );
@@ -231,7 +236,7 @@ function StepRow({ step }: { step: RunStep; active: boolean }) {
   );
 }
 
-function StepDetail({ runId, step }: { runId: string; step: RunStep }) {
+function StepDetail({ runId, step, events }: { runId: string; step: RunStep; events: RunEvent[] }) {
   const [artifacts, setArtifacts] = useState<Array<{ id: string; kind: string; name: string; inline_content: string | null }>>([]);
   const [open, setOpen] = useState(false);
 
@@ -256,6 +261,9 @@ function StepDetail({ runId, step }: { runId: string; step: RunStep }) {
           </Button>
         </Flex>
       </Flex>
+      <Box mt="2">
+        <LogPane stepId={step.id} events={events} isRunning={step.status === "running"} />
+      </Box>
       {open && (
         <Flex direction="column" gap="2" mt="2">
           {artifacts.length === 0 ? (

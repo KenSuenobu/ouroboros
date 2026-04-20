@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { Box, Text } from "@radix-ui/themes";
 import type { RunEvent } from "@/lib/api/types";
 
+const MAX_LOG_LINES = 500;
+
 type LogPaneProps = {
   stepId: string;
   events: RunEvent[];
@@ -11,14 +13,13 @@ type LogPaneProps = {
 };
 
 export function LogPane({ stepId, events, isRunning }: LogPaneProps) {
-  const rows = useMemo(
-    () =>
-      events.filter((evt) => {
-        if (evt.type !== "step.log") return false;
-        return evt.payload?.step_id === stepId && typeof evt.payload?.line === "string";
-      }),
-    [events, stepId],
-  );
+  const rows = useMemo(() => {
+    const filtered = events.filter((evt) => {
+      if (evt.type !== "step.log") return false;
+      return evt.payload?.step_id === stepId && typeof evt.payload?.line === "string";
+    });
+    return filtered.length > MAX_LOG_LINES ? filtered.slice(-MAX_LOG_LINES) : filtered;
+  }, [events, stepId]);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

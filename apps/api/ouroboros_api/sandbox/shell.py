@@ -81,27 +81,32 @@ async def iter_process_lines(proc: asyncio.subprocess.Process) -> AsyncIterator[
     if proc.stdout is None or proc.stderr is None:
         return
 
-    queue: asyncio.Queue[tuple[str, str | None]] = asyncio.Queue()
+    queue: asyncio.Queue[tuple[str, str | None]] = asyncio.Queue(maxsize=1000)
 
     async def _pump(reader: asyncio.StreamReader, stream: str) -> None:
-        while True:
-            line = await reader.readline()
-            if not line:
-                break
-            await queue.put((stream, line.decode("utf-8", errors="replace")))
-        await queue.put((stream, None))
+        try:
+            while True:
+                line = await reader.readline()
+                if not line:
+                    break
+                await queue.put((stream, line.decode("utf-8", errors="replace")))
+        finally:
+            await queue.put((stream, None))
 
     stdout_task = asyncio.create_task(_pump(proc.stdout, "stdout"))
     stderr_task = asyncio.create_task(_pump(proc.stderr, "stderr"))
-    done = 0
-    while done < 2:
-        stream, line = await queue.get()
-        if line is None:
-            done += 1
-            continue
-        yield (stream, line)
-    await stdout_task
-    await stderr_task
+    try:
+        done = 0
+        while done < 2:
+            stream, line = await queue.get()
+            if line is None:
+                done += 1
+                continue
+            yield (stream, line)
+    finally:
+        stdout_task.cancel()
+        stderr_task.cancel()
+        await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
 
 
 async def _emit_line(sink: LineSink | None, stream: str, line: str) -> None:
@@ -160,7 +165,7 @@ async def run_shell(
         await asyncio.wait_for(_collect_lines(), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        await proc.communicate()
+        await proc.wait()
         return ShellResult(
             cmd=cmd,
             classification=classification,

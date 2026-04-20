@@ -49,11 +49,18 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
     };
   }, [id, events.length]);
 
-  const stepEventsById = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof Object> | unknown>();
+  const eventsByStepId = useMemo(() => {
+    const map = new Map<string, RunEvent[]>();
     for (const evt of events) {
       const stepId = (evt.payload?.step_id as string) || "";
-      if (stepId) map.set(stepId, evt);
+      if (stepId) {
+        const arr = map.get(stepId);
+        if (arr) {
+          arr.push(evt);
+        } else {
+          map.set(stepId, [evt]);
+        }
+      }
     }
     return map;
   }, [events]);
@@ -143,7 +150,7 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
           <Tabs.Content value="timeline">
             <Flex direction="column" gap="3">
               {(run?.steps || []).map((step) => (
-                <StepDetail key={step.id} runId={id} step={step} events={events} />
+                <StepDetail key={step.id} runId={id} step={step} events={eventsByStepId.get(step.id) || []} />
               ))}
             </Flex>
           </Tabs.Content>
@@ -191,9 +198,6 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
           )}
         </Dialog.Content>
       </Dialog.Root>
-
-      {/* avoids lint warning */}
-      {stepEventsById.size > -1 ? null : null}
 
       <_MonacoPreload />
     </PageShell>

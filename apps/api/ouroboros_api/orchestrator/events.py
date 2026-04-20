@@ -26,9 +26,10 @@ class RunEventBus:
         self._history: dict[str, list[RunEvent]] = defaultdict(list)
         self._lock = asyncio.Lock()
 
-    async def publish(self, event: RunEvent) -> None:
+    async def publish(self, event: RunEvent, *, persist: bool = True) -> None:
         async with self._lock:
-            self._history[event.run_id].append(event)
+            if persist:
+                self._history[event.run_id].append(event)
             for q in list(self._queues[event.run_id]):
                 try:
                     q.put_nowait(event)

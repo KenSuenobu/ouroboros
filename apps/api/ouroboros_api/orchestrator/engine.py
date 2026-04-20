@@ -262,7 +262,8 @@ class RunEngine:
                     run_id=run.id,
                     type="step.log",
                     payload={"step_id": step.id, "stream": stream, "line": line},
-                )
+                ),
+                persist=False,
             )
 
         try:

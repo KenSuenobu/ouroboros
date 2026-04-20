@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,12 @@ async def app_and_session(
         await session.commit()
 
     app = create_app()
+
+    @asynccontextmanager
+    async def noop_lifespan(app: object) -> AsyncIterator[None]:
+        yield
+
+    app.router.lifespan_context = noop_lifespan  # type: ignore[method-assign]
 
     async def override_db_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:

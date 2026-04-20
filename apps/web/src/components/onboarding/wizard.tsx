@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Flex, Select, Text, TextField } from "@radix-ui/themes";
 import { mutate } from "swr";
 import { useWorkspaceOnboarding } from "@/lib/api/hooks";
@@ -46,17 +47,20 @@ export function OnboardingWizard() {
     enabled: true,
   });
 
+  useEffect(() => {
+    if (data?.name && workspaceName === "") {
+      setWorkspaceName(data.name);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.name]);
+
   if (!data && !isLoading) {
     return null;
   }
 
   const shouldShow = Boolean(data?.requires_onboarding) && !dismissed;
-  if (!shouldShow) {
-    return null;
-  }
 
-  const resolvedWorkspaceName = workspaceName || data?.name || "";
-  const canAdvanceStepOne = resolvedWorkspaceName.trim().length > 0;
+  const canAdvanceStepOne = workspaceName.trim().length > 0;
   const canAdvanceStepTwo = project.name.trim().length > 0 && project.repo_url.trim().length > 0;
   const canAdvanceStepThree =
     provider.name.trim().length > 0 &&
@@ -75,9 +79,6 @@ export function OnboardingWizard() {
     setBusy(true);
     try {
       if (step === 1) {
-        if (!workspaceName) {
-          setWorkspaceName(data.name);
-        }
         setStep(2);
         return;
       }
@@ -99,7 +100,7 @@ export function OnboardingWizard() {
         api_key: provider.api_key?.trim() || undefined,
       });
       await mutate("/api/providers");
-      await api.post("/api/workspaces/me/onboarding", { name: resolvedWorkspaceName.trim() });
+      await api.post("/api/workspaces/me/onboarding", { name: workspaceName.trim() });
       await mutate("/api/workspaces/me");
       setDismissed(true);
     } catch (err) {
@@ -110,12 +111,21 @@ export function OnboardingWizard() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
-        <Flex justify="between" align="center" mb="3">
-          <Text size="5" weight="bold">{stepTitle}</Text>
-          <Button variant="ghost" color="gray" onClick={() => setDismissed(true)}>Skip for now</Button>
-        </Flex>
+    <Dialog.Root open={shouldShow} onOpenChange={(open) => { if (!open) setDismissed(true); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-gray-200 bg-white p-6 shadow-2xl focus:outline-none"
+          aria-describedby={undefined}
+        >
+          <Flex justify="between" align="center" mb="3">
+            <Dialog.Title asChild>
+              <Text size="5" weight="bold">{stepTitle}</Text>
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button variant="ghost" color="gray">Skip for now</Button>
+            </Dialog.Close>
+          </Flex>
         <Text size="2" color="gray">
           Step {step} of 3
         </Text>
@@ -125,7 +135,7 @@ export function OnboardingWizard() {
             <Text size="2" weight="medium">Workspace name</Text>
             <TextField.Root
               placeholder="Acme Engineering"
-              value={resolvedWorkspaceName}
+              value={workspaceName}
               onChange={(event) => setWorkspaceName(event.target.value)}
             />
           </Flex>
@@ -249,8 +259,9 @@ export function OnboardingWizard() {
             {busy ? "Working..." : step === 3 ? "Finish setup" : "Continue"}
           </Button>
         </Flex>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

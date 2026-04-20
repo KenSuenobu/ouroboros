@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from ouroboros_api.orchestrator.dry_run import is_dry_run, step_is_side_effecting
-from ouroboros_api.sandbox.shell import classify_command, run_shell
+from ouroboros_api.sandbox.shell import classify_command, run_shell, shell_line_subscriber
 from ouroboros_api.sandbox.virtual_fs import VirtualFs
 
 
@@ -67,6 +67,40 @@ async def test_run_shell_allows_safe_commands(tmp_repo: Path) -> None:
     assert res.blocked is False
     assert res.exit_code == 0
     assert "README.md" in res.stdout
+
+
+@pytest.mark.asyncio
+async def test_run_shell_streams_lines_to_subscriber(tmp_repo: Path) -> None:
+    seen: list[tuple[str, str]] = []
+
+    async def on_line(stream: str, line: str) -> None:
+        seen.append((stream, line))
+
+    with shell_line_subscriber(on_line):
+        res = await run_shell(
+            'python -c "import sys; print(\'out\', flush=True); print(\'err\', file=sys.stderr, flush=True)"',
+            cwd=tmp_repo,
+            dry_run=False,
+        )
+
+    assert res.succeeded is True
+    assert ("stdout", "out\n") in seen
+    assert ("stderr", "err\n") in seen
+
+
+@pytest.mark.asyncio
+async def test_run_shell_can_be_cancelled(tmp_repo: Path) -> None:
+    task = asyncio.create_task(
+        run_shell(
+            'python -c "import time; time.sleep(30)"',
+            cwd=tmp_repo,
+            dry_run=False,
+        )
+    )
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(task, timeout=3.0)
 
 
 def test_virtualfs_overlays_writes(tmp_repo: Path) -> None:

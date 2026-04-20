@@ -19,6 +19,7 @@ Completed
 - #7 - Added a first-run onboarding wizard for workspace setup, initial project connection, and first provider setup.
 - #9 - Added repository command introspection to suggest build/test commands in the project editor.
 - #10 - Added per-language router policy defaults to all seed router agents.
+- #11 - Added real-time stdout/stderr streaming for shell steps with step-level live logs.
 
 ---
 
@@ -36,7 +37,6 @@ Completed
 | #     | Issue                                                                                          | Tier | Notes                                                    |
 |-------|------------------------------------------------------------------------------------------------|------|----------------------------------------------------------|
 | #8 | Healthcheck panel: ping each configured provider, surface "needs key" / "ollama unreachable"   | MVP  | New `GET /api/providers/{id}/health` and a `/health` page       |
-| #11 | Real-time stderr/stdout streaming for shell steps (not just final blob)                        | MVP  | New `step.log` events on the WebSocket bus                       |
 | #12 | Persisted `.env` for `OUROBOROS_DB_URL` etc. via `ouroboros init` CLI                          | MVP  | Today envs are read but never written for the user               |
 | #13 | "Resume" button when a run was interrupted by a crash mid-step                                 | MVP  | Engine has `attempts` but no resume from prior step              |
 | #14 | Robust dry-run diff viewer: real side-by-side using Monaco's `DiffEditor`                      | MVP  | Current `DiffViewer` is a thin wrapper; needs left/right inputs  |

@@ -25,7 +25,7 @@ from ..db.models import (
     RunStep,
 )
 from ..db.session import SessionLocal
-from ..sandbox import VirtualFs, prepare_sandbox
+from ..sandbox import VirtualFs, prepare_sandbox, shell_line_subscriber
 from ..secrets import secrets
 from .context import RunContext
 from .cost import estimate_cost_usd
@@ -256,8 +256,18 @@ class RunEngine:
                 session, run, step, StepResult(summary="bad adapter", failed=True, error=str(exc))
             )
 
+        async def _publish_step_log(stream: str, line: str) -> None:
+            await bus.publish(
+                RunEvent(
+                    run_id=run.id,
+                    type="step.log",
+                    payload={"step_id": step.id, "stream": stream, "line": line},
+                )
+            )
+
         try:
-            result = await adapter.run(ctx, agent, resolved)
+            with shell_line_subscriber(_publish_step_log):
+                result = await adapter.run(ctx, agent, resolved)
         except Exception as exc:
             log.exception("step failed")
             result = StepResult(summary="step crashed", failed=True, error=str(exc))

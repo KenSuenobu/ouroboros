@@ -53,3 +53,4 @@ Thumbs.db
 
 # Local state for scripts/create_issues.py (idempotency cache; not source of truth)
 scripts/.issues_state.json
+apps/api/data

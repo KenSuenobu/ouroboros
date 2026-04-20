@@ -1,6 +1,6 @@
 [project]
 name = "ouroboros-api"
-version = "0.1.1"
+version = "0.1.2"
 description = "Ouroboros orchestrator API: agent pipelines, dry-run, MCP, multi-provider LLM routing."
 requires-python = ">=3.12"
 readme = "README.md"

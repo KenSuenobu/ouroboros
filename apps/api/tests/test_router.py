@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from ouroboros_api.orchestrator.router import detect_language, pick_model
+from ouroboros_api.seeds.agents import DEFAULT_AGENTS
 
 
 def test_detect_language_from_file_extension_in_body() -> None:
@@ -33,6 +34,11 @@ def _model(pid: str, mid: str) -> SimpleNamespace:
     return SimpleNamespace(provider_id=pid, model_id=mid, input_cost_per_mtok=0.0, output_cost_per_mtok=0.0)
 
 
+def _seed_policy(role: str) -> dict:
+    spec = next(agent for agent in DEFAULT_AGENTS if agent["role"] == role)
+    return spec["model_policy"]
+
+
 def test_pick_model_respects_fixed_policy() -> None:
     agent = SimpleNamespace(
         role="coder",
@@ -56,6 +62,26 @@ def test_pick_model_router_uses_language_hint() -> None:
     models = {"p1": [_model("p1", "llama3")], "p2": [_model("p2", "claude-3-5-sonnet")]}
     out = pick_model(agent, providers, models, issue={"title": "x", "body": "src/x.py"})
     assert out and out[0].kind == "anthropic" and "sonnet" in out[1].model_id
+
+
+def test_pick_model_uses_planner_seed_policy_for_python_issue() -> None:
+    agent = SimpleNamespace(role="planner", model_policy=_seed_policy("planner"))
+    providers = [_provider("p1", "ollama"), _provider("p2", "anthropic")]
+    models = {"p1": [_model("p1", "llama3")], "p2": [_model("p2", "claude-3-5-sonnet")]}
+
+    out = pick_model(agent, providers, models, issue={"title": "x", "body": "src/foo.py"})
+
+    assert out and out[0].kind == "anthropic" and "sonnet" in out[1].model_id
+
+
+def test_pick_model_uses_coder_seed_policy_for_python_issue() -> None:
+    agent = SimpleNamespace(role="coder", model_policy=_seed_policy("coder"))
+    providers = [_provider("p1", "anthropic"), _provider("p2", "ollama")]
+    models = {"p1": [_model("p1", "claude-3-5-sonnet")], "p2": [_model("p2", "qwen2.5-coder")]}
+
+    out = pick_model(agent, providers, models, issue={"title": "x", "body": "src/foo.py"})
+
+    assert out and out[0].kind == "ollama" and "qwen" in out[1].model_id
 
 
 def test_pick_model_falls_back_to_first_enabled_provider() -> None:

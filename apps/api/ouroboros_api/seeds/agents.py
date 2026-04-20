@@ -17,7 +17,10 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
     {
         "name": "Issue Summarizer",
         "role": "issue.summarizer",
-        "description": "Summarizes the issue, surfaces ambiguity, proposes clarifying questions.",
+        "description": (
+            "Summarizes the issue, surfaces ambiguity, and asks clarifying questions. "
+            "Python/TypeScript issues default to Anthropic Sonnet."
+        ),
         "system_prompt": (
             "You are reviewing a GitHub/GitLab issue. Produce a concise summary of intent, "
             "list any ambiguities, and propose clarifying questions if requirements are "
@@ -25,7 +28,16 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
             '{"summary":..., "questions":[...], "risk":"low|medium|high"}.'
         ),
         "execution_adapter": "anthropic_api",
-        "model_policy": {"kind": "router", "router_hints": {"prefer": "reasoning"}},
+        "model_policy": {
+            "kind": "router",
+            "router_hints": {
+                "prefer": "reasoning",
+                "language_map": {
+                    "python": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                    "typescript": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                },
+            },
+        },
         "config": {},
     },
     {
@@ -40,20 +52,35 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
     {
         "name": "Planner",
         "role": "planner",
-        "description": "Produces a structured plan: file list, risk, test plan.",
+        "description": (
+            "Produces a structured plan: file list, risk, and test plan. "
+            "Python/TypeScript issues default to Anthropic Sonnet."
+        ),
         "system_prompt": (
             "You are the planning agent. Read the summarized issue and the relevant repo "
             "context, then output a structured plan: target files, code changes, risks, "
             "and a test plan. Output strict JSON."
         ),
         "execution_adapter": "anthropic_api",
-        "model_policy": {"kind": "router", "router_hints": {"prefer": "reasoning"}},
+        "model_policy": {
+            "kind": "router",
+            "router_hints": {
+                "prefer": "reasoning",
+                "language_map": {
+                    "python": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                    "typescript": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                },
+            },
+        },
         "config": {},
     },
     {
         "name": "Coder",
         "role": "coder",
-        "description": "Applies the plan to the codebase. Routes per dominant language.",
+        "description": (
+            "Applies the plan to the codebase. Python defaults to Ollama Qwen Coder, "
+            "TypeScript to Anthropic Sonnet, and SQL to Ollama SQLCoder."
+        ),
         "system_prompt": (
             "You are the implementation agent. Apply the plan precisely. Use the available "
             "tools (read_file, write_file, run_shell). Keep changes minimal and tested."
@@ -76,14 +103,26 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
     {
         "name": "Internal Audit",
         "role": "internal.audit",
-        "description": "Reviews the diff for misuses, missing tests, hard-coded values.",
+        "description": (
+            "Reviews the diff for misuses, missing tests, and hard-coded values. "
+            "Python/TypeScript issues default to Anthropic Sonnet."
+        ),
         "system_prompt": (
             "You are the audit agent. Review the diff for safety, test coverage, "
             "hard-coded values (colors, secrets), DRY violations, and unclear naming. "
             "Output a list of findings with severity."
         ),
         "execution_adapter": "anthropic_api",
-        "model_policy": {"kind": "router", "router_hints": {"prefer": "reasoning"}},
+        "model_policy": {
+            "kind": "router",
+            "router_hints": {
+                "prefer": "reasoning",
+                "language_map": {
+                    "python": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                    "typescript": {"prefer_kind": "anthropic", "model_hint": "sonnet"},
+                },
+            },
+        },
         "config": {},
     },
     {

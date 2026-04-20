@@ -14,9 +14,12 @@ def _default_data_dir() -> Path:
 
 def _sqlite_db_url_for_data_dir(data_dir: Path) -> str:
     sqlite_path = data_dir / "ouroboros.sqlite"
+    sqlite_path_posix = sqlite_path.as_posix()
     if sqlite_path.is_absolute():
-        return f"sqlite+aiosqlite:///{sqlite_path.as_posix()}"
-    return f"sqlite+aiosqlite:///./{sqlite_path.as_posix().lstrip('./')}"
+        return f"sqlite+aiosqlite:///{sqlite_path_posix}"
+    if sqlite_path_posix.startswith("./"):
+        sqlite_path_posix = sqlite_path_posix[2:]
+    return f"sqlite+aiosqlite:///./{sqlite_path_posix}"
 
 
 class Settings(BaseSettings):
@@ -54,4 +57,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-settings.ensure_dirs()

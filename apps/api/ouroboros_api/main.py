@@ -29,6 +29,7 @@ log = logging.getLogger("ouroboros")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings.ensure_dirs()
     await init_db()
     log.info("ouroboros api ready (data_dir=%s)", settings.data_dir)
     yield

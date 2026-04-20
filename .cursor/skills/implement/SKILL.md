@@ -5,7 +5,7 @@ description: Fetches the GitHub Issue for the current repo, implements it on bra
 
 # Implement (`/implement <number>`)
 
-When the user invokes **implement** with an issue number (for example `/implement 124`), treat that number as the **GitHub issue** in the **current repository** (e.g. `KenSuenobu/objectified` for this workspace). Follow this workflow end to end unless the user stops you or the environment blocks a step (auth, permissions, missing `gh`, etc.).
+When the user invokes **implement** with an issue number (for example `/implement 124`), treat that number as the **GitHub issue** in the **current repository** (e.g. `KenSuenobu/ouroboros` for this workspace). Follow this workflow end to end unless the user stops you or the environment blocks a step (auth, permissions, missing `gh`, etc.).
 
 ## Phase 1 - Fetch the issue
 
@@ -40,7 +40,7 @@ git checkout -b ticket-<number>
 
 ## Phase 3 - Implementation
 
-- Apply **CLAUDE.md** / **copilot-instructions.md** and other workspace rules (tests, version bumps, no edits to reference-only trees, etc.).
+- Apply **CLAUDE.md** / **copilot-instructions.md** / **.cursorrules** and other workspace rules (tests, version bumps, no edits to reference-only trees, etc.).
 - Implement the behavior **as specified in the issue**.
 - If the change is **large or risky**, outline a short plan in the chat and wait for alignment before proceeding.
 - Split code into separate modules, helper functions, or utility classes if context becomes too large or unmanageable.
@@ -70,7 +70,7 @@ From the **repository root**, run the project's standard checks:
 yarn build
 ```
 
-Also run any package-specific builds required by workspace rules (e.g. `objectified-ui` per **CLAUDE.md**)
+Also run any package-specific builds required by workspace rules.
 
 2. Run the tests:
 
@@ -87,8 +87,9 @@ Also run any package-specific tests the issue touches, per READMEs.
 
 1. Mark the ticket complete in **ROADMAP** and remove its entry from the issues list matching the issue number.
 2. Add a one-line summary of the work performed to **public/WHATS_NEW.md**.
-3. Bump the patch version of the application in the **objectified-ui/package.json** when a change is made in **objectified-ui**.
-4. Bump the patch version of pyproject.toml in **objectified-rest** when a change is made in that project.
+3. Bump the patch version of the application in the **apps/web/package.json** when a change is made in **apps/web**.
+4. Bump the patch version of pyproject.toml in **apps/api** when a change is made in that project.
+5. Make note of the work in the CHANGELOG.  If no CHANGELOG exists, create one.  The latest change should be at the top of the file.
 
 ## Phase 7 - Commit, Push, and PR
 

@@ -20,10 +20,10 @@ async function flush() {
   });
 }
 
-async function waitForText(container: HTMLElement, text: string, present = true) {
+async function waitForText(root: HTMLElement, text: string, present = true) {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     await flush();
-    const hasText = container.textContent?.includes(text) ?? false;
+    const hasText = root.textContent?.includes(text) ?? false;
     if ((present && hasText) || (!present && !hasText)) {
       return;
     }
@@ -141,20 +141,21 @@ describe("OnboardingWizard", () => {
 
   it("can be skipped and resurfaces on a new load", async () => {
     const view = renderWizard();
-    await waitForText(view.container, "Name your workspace");
+    await waitForText(document.body, "Name your workspace");
 
-    const skipButton = Array.from(view.container.querySelectorAll("button")).find((node) =>
+    const skipButton = Array.from(document.body.querySelectorAll("button")).find((node) =>
       node.textContent?.includes("Skip for now"),
     );
     expect(skipButton).toBeTruthy();
     act(() => {
       (skipButton as HTMLButtonElement).click();
     });
-    await waitForText(view.container, "Name your workspace", false);
+    await waitForText(document.body, "Name your workspace", false);
 
     view.unmount();
     const second = renderWizard();
-    await waitForText(second.container, "Name your workspace");
+    await waitForText(document.body, "Name your workspace");
+    second.unmount();
   });
 
   it("stays hidden when onboarding is already complete", async () => {

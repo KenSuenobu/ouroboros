@@ -10,11 +10,15 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+    "@ouroboros/api#build": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "lint": {
       "outputs": []
     },
     "test": {
-      "outputs": ["coverage/**", "htmlcov/**"]
+      "outputs": []
     },
     "test:e2e": {
       "cache": false,

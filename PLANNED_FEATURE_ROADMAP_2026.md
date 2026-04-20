@@ -16,6 +16,7 @@ Legend
 
 Completed
 - #67 - Added system-aware light/dark mode with a top-right header toggle in the web app.
+- #7 - Added a first-run onboarding wizard for workspace setup, initial project connection, and first provider setup.
 
 ---
 
@@ -32,7 +33,6 @@ Completed
 
 | #     | Issue                                                                                          | Tier | Notes                                                    |
 |-------|------------------------------------------------------------------------------------------------|------|----------------------------------------------------------|
-| #7 | First-run onboarding wizard (workspace name → first project → first provider key)              | MVP  | Wraps the `/projects`, `/providers` flows in a guided 3-step modal |
 | #8 | Healthcheck panel: ping each configured provider, surface "needs key" / "ollama unreachable"   | MVP  | New `GET /api/providers/{id}/health` and a `/health` page       |
 | #9 | Auto-detect repo `build`/`test` commands (package.json scripts, pyproject sections, Makefile)  | MVP  | Pre-fills Project commands so first run "just works"             |
 | #10 | Improved router default policy (per-language) baked into seed agents, not just `coder`         | MVP  | Currently only the `coder` agent has language hints              |

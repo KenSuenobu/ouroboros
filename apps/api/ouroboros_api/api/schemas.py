@@ -16,7 +16,22 @@ class WorkspaceOut(_Base):
     id: str
     slug: str
     name: str
+    onboarding_completed_at: datetime | None = None
     created_at: datetime
+
+
+class WorkspaceMeOut(_Base):
+    id: str
+    slug: str
+    name: str
+    onboarding_completed_at: datetime | None = None
+    project_count: int
+    provider_count: int
+    requires_onboarding: bool
+
+
+class WorkspaceOnboardingIn(_Base):
+    name: str | None = None
 
 
 class ProjectIn(_Base):

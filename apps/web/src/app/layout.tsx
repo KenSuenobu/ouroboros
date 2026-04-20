@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import { TopHeader } from "@/components/layout/top-header";
+import { OnboardingWizard } from "@/components/onboarding/wizard";
 import { AppThemeProvider } from "@/components/theme/app-theme-provider";
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <TopHeader />
             <div className="app-body">{children}</div>
           </div>
+          <OnboardingWizard />
         </AppThemeProvider>
       </body>
     </html>

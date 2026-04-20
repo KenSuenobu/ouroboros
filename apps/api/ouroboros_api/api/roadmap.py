@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db.models import IssueRoadmapPair, Project, RoadmapEntry, Workspace
+from ..services.repo_auth import project_access_token, redact_access_token, repo_url_with_token
 from ..services.roadmap_parser import discover_roadmap_files, parse_roadmap_file
 from .deps import db_session, workspace
 from .schemas import IssueRoadmapPairIn, IssueRoadmapPairOut, RoadmapEntryOut
@@ -43,11 +44,17 @@ def _shallow_clone(project: Project) -> Path:
         shutil.rmtree(target)
     import subprocess
 
-    subprocess.run(
-        ["git", "clone", "--depth", "1", project.repo_url, str(target)],
-        check=True,
-        capture_output=True,
-    )
+    access_token = project_access_token(project)
+    clone_url = repo_url_with_token(project.repo_url, access_token)
+    try:
+        subprocess.run(
+            ["git", "clone", "--depth", "1", clone_url, str(target)],
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        error = exc.stderr.decode(errors="replace").strip() or exc.stdout.decode(errors="replace").strip()
+        raise RuntimeError(redact_access_token(error or "git clone failed", access_token)) from exc
     return target
 
 

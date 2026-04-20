@@ -34,7 +34,7 @@ class WorkspaceOnboardingIn(_Base):
     name: str | None = None
 
 
-class ProjectIn(_Base):
+class ProjectBase(_Base):
     name: str
     repo_url: str
     scm_kind: str = "github"
@@ -46,9 +46,14 @@ class ProjectIn(_Base):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
-class ProjectOut(ProjectIn):
+class ProjectIn(ProjectBase):
+    access_token: str | None = None
+
+
+class ProjectOut(ProjectBase):
     id: str
     workspace_id: str
+    has_access_token: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -56,6 +61,41 @@ class ProjectOut(ProjectIn):
 class ProjectIntrospectionOut(_Base):
     build: list[str] = Field(default_factory=list)
     test: list[str] = Field(default_factory=list)
+
+
+class ProjectRepoTestOut(_Base):
+    ok: bool
+    message: str
+
+
+class ProjectRepoTestIn(_Base):
+    repo_url: str
+    default_branch: str = "main"
+    access_token: str | None = None
+
+
+class GitHubDeviceOAuthStartIn(_Base):
+    repo_url: str
+
+
+class GitHubDeviceOAuthStartOut(_Base):
+    device_code: str
+    user_code: str
+    verification_uri: str
+    expires_in: int
+    interval: int = 5
+
+
+class GitHubDeviceOAuthPollIn(_Base):
+    device_code: str
+
+
+class GitHubDeviceOAuthPollOut(_Base):
+    status: str
+    access_token: str | None = None
+    error: str | None = None
+    error_description: str | None = None
+    interval: int | None = None
 
 
 class IssueOut(_Base):

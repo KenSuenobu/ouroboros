@@ -2,6 +2,8 @@
 
 ## 2026-04-20
 
+- Adds the ability to test a repository URL when entering it into the projects form.
+- Adds project repository tokens for private repository access.
 - Adds react-flow styling, hover over edges now shows details between the nodes.
 - Adds sort order in the issues list.
 - Fixes tests and build process.

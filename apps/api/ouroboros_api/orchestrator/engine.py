@@ -26,6 +26,7 @@ from ..db.models import (
 )
 from ..db.session import SessionLocal
 from ..sandbox import VirtualFs, prepare_sandbox, shell_line_subscriber
+from ..services.repo_auth import project_access_token
 from ..secrets import secrets
 from .context import RunContext
 from .cost import estimate_cost_usd
@@ -118,7 +119,12 @@ class RunEngine:
             await bus.publish(RunEvent(run_id=run.id, type="run.started", payload={"dry_run": run.dry_run}))
 
             try:
-                sandbox = await prepare_sandbox(run.id, project.repo_url, project.default_branch)
+                sandbox = await prepare_sandbox(
+                    run.id,
+                    project.repo_url,
+                    project.default_branch,
+                    project_access_token(project),
+                )
             except Exception as exc:
                 run.status = "failed"
                 run.error = f"sandbox setup: {exc}"

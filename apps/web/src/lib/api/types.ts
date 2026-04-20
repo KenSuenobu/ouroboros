@@ -30,11 +30,14 @@ export type Project = {
   build_command: string | null;
   test_command: string | null;
   config: Record<string, unknown>;
+  has_access_token: boolean;
   created_at: string;
   updated_at: string;
 };
 
-export type ProjectInput = Omit<Project, "id" | "workspace_id" | "created_at" | "updated_at">;
+export type ProjectInput = Omit<Project, "id" | "workspace_id" | "created_at" | "updated_at" | "has_access_token"> & {
+  access_token?: string;
+};
 
 export type ProjectIntrospection = {
   build: string[];

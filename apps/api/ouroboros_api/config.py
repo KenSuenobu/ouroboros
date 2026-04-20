@@ -40,6 +40,8 @@ class Settings(BaseSettings):
 
     mcp_registry_url: str = "https://registry.modelcontextprotocol.io"
     mcp_registry_cache_ttl_seconds: int = 3600
+    github_oauth_client_id: str = ""
+    github_oauth_scope: str = "repo"
 
     log_level: str = "INFO"
 

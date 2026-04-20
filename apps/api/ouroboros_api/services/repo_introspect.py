@@ -13,6 +13,7 @@ from typing import Any
 
 from ..config import settings
 from ..db.models import Project
+from .repo_auth import project_access_token, repo_url_with_token
 
 _TARGET_FILES = ("package.json", "pyproject.toml", "Makefile", "Cargo.toml", "go.mod")
 
@@ -55,7 +56,8 @@ def _shallow_clone(project: Project) -> Path | None:
     cmd = ["git", "-c", "protocol.file.allow=never", "clone", "--depth", "1"]
     if project.default_branch:
         cmd.extend(["--branch", project.default_branch])
-    cmd.extend(["--", project.repo_url, str(target)])
+    clone_url = repo_url_with_token(project.repo_url, project_access_token(project))
+    cmd.extend(["--", clone_url, str(target)])
     try:
         subprocess.run(
             cmd,

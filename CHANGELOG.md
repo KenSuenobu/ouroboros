@@ -2,6 +2,7 @@
 
 ## 2026-04-20
 
+- Adds react-flow styling, hover over edges now shows details between the nodes.
 - Adds sort order in the issues list.
 - Fixes tests and build process.
 - Fixes the react-markdown formatting in issues, which was not rendering properly.

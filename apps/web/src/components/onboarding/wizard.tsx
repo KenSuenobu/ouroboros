@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Flex, Select, Text, TextField } from "@radix-ui/themes";
@@ -47,11 +47,13 @@ export function OnboardingWizard() {
     enabled: true,
   });
 
+  const nameInitialized = useRef(false);
+
   useEffect(() => {
-    if (data?.name && workspaceName === "") {
+    if (data?.name && !nameInitialized.current) {
+      nameInitialized.current = true;
       setWorkspaceName(data.name);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.name]);
 
   if (!data && !isLoading) {

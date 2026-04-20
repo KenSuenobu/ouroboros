@@ -36,7 +36,7 @@ async def app_and_session(
     app = create_app()
 
     @asynccontextmanager
-    async def noop_lifespan(app: object) -> AsyncIterator[None]:
+    async def noop_lifespan(_app: object) -> AsyncIterator[None]:
         yield
 
     app.router.lifespan_context = noop_lifespan  # type: ignore[method-assign]

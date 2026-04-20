@@ -10,6 +10,7 @@ from ..base import LLMMessage, ProviderRegistry, ResolvedModel, StepResult
 from ..tools import TOOL_SCHEMAS, ToolContext, invoke_tool
 
 MAX_TOOL_TURNS = 12
+_MAX_FILE_DIFF_CHARS = 20_000
 
 
 def _format_finish(result: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -98,12 +99,19 @@ async def llm_agent_loop(
 
     if ctx.dry_run:
         for change in ctx.vfs.list_changes():
+            raw_content = change.get("content", "")
+            truncated = len(raw_content) > _MAX_FILE_DIFF_CHARS
+            inline = raw_content[-_MAX_FILE_DIFF_CHARS:] if truncated else raw_content
             artifacts.append(
                 {
                     "kind": "file_diff",
                     "name": change["path"],
-                    "inline_content": change.get("content", ""),
-                    "meta": {"kind": change["kind"], "path": change["path"]},
+                    "inline_content": inline,
+                    "meta": {
+                        "kind": change["kind"],
+                        "path": change["path"],
+                        "truncated": truncated,
+                    },
                 }
             )
 

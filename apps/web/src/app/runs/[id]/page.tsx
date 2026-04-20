@@ -340,8 +340,14 @@ function FileDiffArtifact({
       })
       .catch((err: unknown) => {
         if (!alive) return;
-        const message = err instanceof Error ? err.message : "Failed to load original file";
-        setError(message);
+        // A 404 means the file didn't exist before (e.g. newly-added file).
+        // Fall back to an empty original so the diff still renders correctly.
+        const message = err instanceof Error ? err.message : "";
+        if (message.startsWith("404:")) {
+          setOriginalContent("");
+          return;
+        }
+        setError(message || "Failed to load original file");
       });
     return () => {
       alive = false;
@@ -357,12 +363,21 @@ function FileDiffArtifact({
   }
 
   return (
-    <MonacoDiff
-      original={originalContent}
-      modified={artifact.inline_content || ""}
-      language={inferLanguageFromPath(path)}
-      showModeToggle
-    />
+    <>
+      {artifact.meta?.truncated && (
+        <Box style={{ marginBottom: 4 }}>
+          <Text size="1" color="orange">
+            Proposed file content was too large and has been truncated to the last 20,000 characters.
+          </Text>
+        </Box>
+      )}
+      <MonacoDiff
+        original={originalContent}
+        modified={artifact.inline_content || ""}
+        language={inferLanguageFromPath(path)}
+        showModeToggle
+      />
+    </>
   );
 }
 

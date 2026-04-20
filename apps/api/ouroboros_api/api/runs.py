@@ -6,6 +6,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import select
@@ -314,7 +315,9 @@ async def sandbox_file(
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "File not found in sandbox")
     try:
-        content = target.read_text(encoding="utf-8")
+        content = await anyio.to_thread.run_sync(
+            lambda: target.read_text(encoding="utf-8")
+        )
     except UnicodeDecodeError as exc:
         raise HTTPException(400, "File is not valid UTF-8 text") from exc
     return {"path": path, "content": content}

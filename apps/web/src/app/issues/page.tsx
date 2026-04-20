@@ -24,6 +24,7 @@ export default function IssuesPage() {
   const [labelFilter, setLabelFilter] = useState<string>("");
   const [groupBy, setGroupBy] = useState<"none" | "label" | "milestone">("none");
   const [sortBy, setSortBy] = useState<"number" | "title">("number");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState(true);
 
@@ -37,9 +38,13 @@ export default function IssuesPage() {
       list = list.filter((i) => i.title.toLowerCase().includes(q) || (i.body || "").toLowerCase().includes(q));
     }
     if (labelFilter) list = list.filter((i) => i.labels.includes(labelFilter));
-    list = [...list].sort((a, b) => (sortBy === "number" ? b.number - a.number : a.title.localeCompare(b.title)));
+    const direction = sortDirection === "asc" ? 1 : -1;
+    list = [...list].sort((a, b) => {
+      const base = sortBy === "number" ? a.number - b.number : a.title.localeCompare(b.title);
+      return base * direction;
+    });
     return list;
-  }, [issues, search, labelFilter, sortBy]);
+  }, [issues, search, labelFilter, sortBy, sortDirection]);
 
   const grouped = useMemo(() => {
     if (groupBy === "none") return [{ key: "All issues", items: filtered }];
@@ -145,11 +150,27 @@ export default function IssuesPage() {
             </Select.Root>
           </Field>
           <Field label="Sort">
-            <Select.Root value={sortBy} onValueChange={(v) => setSortBy(v as "number" | "title")}>
+            <Select.Root
+              value={sortBy}
+              onValueChange={(v) => {
+                const next = v as "number" | "title";
+                setSortBy(next);
+                setSortDirection(next === "number" ? "desc" : "asc");
+              }}
+            >
               <Select.Trigger />
               <Select.Content>
                 <Select.Item value="number">Number</Select.Item>
                 <Select.Item value="title">Title</Select.Item>
+              </Select.Content>
+            </Select.Root>
+          </Field>
+          <Field label="Order">
+            <Select.Root value={sortDirection} onValueChange={(v) => setSortDirection(v as "asc" | "desc")}>
+              <Select.Trigger />
+              <Select.Content>
+                <Select.Item value="asc">Ascending</Select.Item>
+                <Select.Item value="desc">Descending</Select.Item>
               </Select.Content>
             </Select.Root>
           </Field>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { mutate } from "swr";
 import {
-  Badge,
   Box,
   Button,
   Flex,
@@ -13,6 +12,7 @@ import {
 } from "@radix-ui/themes";
 import { PageShell, PageHeader } from "@/components/layout/page-shell";
 import { SidebarList } from "@/components/common/sidebar-list";
+import { HealthBadge } from "@/components/provider-health-badge";
 import { useProviderModels, useProviders } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Provider, ProviderHealth, ProviderInput } from "@/lib/api/types";
@@ -23,20 +23,6 @@ const DEFAULT_BASE_URL: Record<string, string> = {
   ollama: "http://localhost:11434",
   anthropic: "https://api.anthropic.com",
   github_models: "https://models.github.ai",
-};
-
-const HEALTH_LABEL: Record<NonNullable<Provider["last_health_status"]>, string> = {
-  ok: "ok",
-  unreachable: "unreachable",
-  unauthorized: "unauthorized",
-  "no-models": "no models",
-};
-
-const HEALTH_COLOR: Record<NonNullable<Provider["last_health_status"]>, "green" | "red" | "orange" | "gray"> = {
-  ok: "green",
-  unreachable: "red",
-  unauthorized: "orange",
-  "no-models": "gray",
 };
 
 export default function ProvidersPage() {
@@ -58,10 +44,13 @@ export default function ProvidersPage() {
         config: active.config,
         enabled: active.enabled,
       });
-      setHealthInfo(active.last_health_error);
       setShowHealthDetails(false);
     }
   }, [active?.id]);
+
+  useEffect(() => {
+    setHealthInfo(active?.last_health_error ?? null);
+  }, [active?.last_health_error]);
 
   const startNew = () => {
     setActiveId(null);
@@ -216,31 +205,6 @@ export default function ProvidersPage() {
         <div className="empty-state">Select or create a provider</div>
       )}
     </PageShell>
-  );
-}
-
-function HealthBadge({ provider, onClick }: { provider: Provider; onClick?: () => void }) {
-  const status = provider.last_health_status;
-  const badge = !status ? (
-    <Badge color="gray" title="No health check yet">
-      unknown
-    </Badge>
-  ) : (
-    <Badge color={HEALTH_COLOR[status]} title={provider.last_health_error || ""}>
-      {HEALTH_LABEL[status]}
-    </Badge>
-  );
-
-  if (!onClick) return badge;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{ background: "transparent", border: 0, padding: 0, margin: 0, cursor: "pointer" }}
-    >
-      {badge}
-    </button>
   );
 }
 

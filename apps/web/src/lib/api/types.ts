@@ -78,7 +78,7 @@ export type Provider = {
   has_api_key: boolean;
   config: Record<string, unknown>;
   enabled: boolean;
-  last_health_status: "ok" | "unreachable" | "unauthorized" | "no-models" | null;
+  last_health_status: "ok" | "unreachable" | "unauthorized" | "no-models" | "unsupported" | null;
   last_health_error: string | null;
   last_health_checked_at: string | null;
 };
@@ -104,7 +104,7 @@ export type ProviderModel = {
 
 export type ProviderHealth = {
   provider_id: string;
-  status: "ok" | "unreachable" | "unauthorized" | "no-models";
+  status: "ok" | "unreachable" | "unauthorized" | "no-models" | "unsupported";
   error: string | null;
   checked_at: string;
 };

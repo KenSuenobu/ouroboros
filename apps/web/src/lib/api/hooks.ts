@@ -30,7 +30,11 @@ export const useRoadmap = (projectId: string | null) =>
   useSWR<RoadmapEntry[]>(projectId ? `/api/projects/${projectId}/roadmap` : null, fetcher);
 export const useProviders = () => useSWR<Provider[]>("/api/providers", fetcher);
 export const useProviderHealth = (providerId: string | null) =>
-  useSWR<ProviderHealth>(providerId ? `/api/providers/${providerId}/health` : null, fetcher);
+  useSWR<ProviderHealth>(providerId ? `/api/providers/${providerId}/health` : null, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+  });
 export const useProviderModels = (providerId: string | null) =>
   useSWR<ProviderModel[]>(providerId ? `/api/providers/${providerId}/models` : null, fetcher);
 export const useAgents = () => useSWR<Agent[]>("/api/agents", fetcher);

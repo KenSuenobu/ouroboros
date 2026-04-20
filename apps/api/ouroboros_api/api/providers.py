@@ -125,7 +125,7 @@ async def _probe_health(provider: Provider) -> tuple[str, str | None]:
             return status, _error_text(exc.response)
         return status, str(exc)
 
-    return "ok", None
+    return "unsupported", f"Health probe not implemented for provider kind: {provider.kind}"
 
 
 async def _run_health_probe(provider: Provider) -> ProviderHealthOut:

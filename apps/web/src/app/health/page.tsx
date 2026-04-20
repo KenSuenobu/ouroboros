@@ -1,24 +1,10 @@
 "use client";
 
-import { Badge, Box, Flex, Text } from "@radix-ui/themes";
+import { Box, Flex, Text } from "@radix-ui/themes";
 import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-shell";
+import { HealthBadge } from "@/components/provider-health-badge";
 import { useProviders } from "@/lib/api/hooks";
-import type { Provider } from "@/lib/api/types";
-
-const HEALTH_LABEL: Record<NonNullable<Provider["last_health_status"]>, string> = {
-  ok: "ok",
-  unreachable: "unreachable",
-  unauthorized: "unauthorized",
-  "no-models": "no models",
-};
-
-const HEALTH_COLOR: Record<NonNullable<Provider["last_health_status"]>, "green" | "red" | "orange" | "gray"> = {
-  ok: "green",
-  unreachable: "red",
-  unauthorized: "orange",
-  "no-models": "gray",
-};
 
 export default function ProviderHealthPage() {
   const { data: providers = [] } = useProviders();
@@ -60,18 +46,5 @@ export default function ProviderHealthPage() {
         ) : null}
       </Flex>
     </main>
-  );
-}
-
-function HealthBadge({ provider }: { provider: Provider }) {
-  const status = provider.last_health_status;
-  if (!status) {
-    return <Badge color="gray">unknown</Badge>;
-  }
-
-  return (
-    <Badge color={HEALTH_COLOR[status]} title={provider.last_health_error || ""}>
-      {HEALTH_LABEL[status]}
-    </Badge>
   );
 }

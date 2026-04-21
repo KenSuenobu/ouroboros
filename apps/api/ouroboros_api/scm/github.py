@@ -18,8 +18,9 @@ def _gh_available() -> bool:
 
 
 class GithubClient:
-    def __init__(self, token_env: str = "GITHUB_TOKEN") -> None:
-        self.token = os.environ.get(token_env)
+    def __init__(self, token: str | None = None, token_env: str = "GITHUB_TOKEN") -> None:
+        resolved = (token or "").strip()
+        self.token = resolved or os.environ.get(token_env)
 
     async def _gh(self, *args: str) -> str:
         proc = await asyncio.create_subprocess_exec(
@@ -37,20 +38,38 @@ class GithubClient:
         return httpx.AsyncClient(base_url="https://api.github.com", headers=headers, timeout=20.0)
 
     async def list_issues(
-        self, repo: str, *, state: str = "open", limit: int = 100
+        self, repo: str, *, state: str = "open", limit: int | None = 100
     ) -> list[IssueRecord]:
-        if _gh_available():
+        if _gh_available() and limit is not None:
             raw = await self._gh(
                 "issue", "list", "--repo", repo, "--state", state, "--limit", str(limit),
                 "--json", "number,title,state,body,labels,assignees,milestone,url",
             )
             data = json.loads(raw)
             return [self._parse_gh_issue(item) for item in data]
+
+        remaining = limit
+        page = 1
+        records: list[IssueRecord] = []
         async with await self._http() as client:
-            r = await client.get(f"/repos/{repo}/issues", params={"state": state, "per_page": min(100, limit)})
-            r.raise_for_status()
-            data = [i for i in r.json() if "pull_request" not in i]
-            return [self._parse_rest_issue(item) for item in data[:limit]]
+            while True:
+                per_page = min(100, remaining) if remaining is not None else 100
+                r = await client.get(
+                    f"/repos/{repo}/issues",
+                    params={"state": state, "per_page": per_page, "page": page},
+                )
+                r.raise_for_status()
+                page_items = [i for i in r.json() if "pull_request" not in i]
+                if not page_items:
+                    break
+                parsed = [self._parse_rest_issue(item) for item in page_items]
+                records.extend(parsed)
+                if remaining is not None:
+                    remaining -= len(parsed)
+                    if remaining <= 0:
+                        break
+                page += 1
+        return records
 
     async def get_issue(self, repo: str, number: int) -> IssueRecord:
         if _gh_available():

@@ -13,10 +13,14 @@ from .base import IssueRecord
 
 class GitlabClient:
     def __init__(
-        self, base_url: str = "https://gitlab.com", token_env: str = "GITLAB_TOKEN"
+        self,
+        base_url: str = "https://gitlab.com",
+        token: str | None = None,
+        token_env: str = "GITLAB_TOKEN",
     ) -> None:
         self.base_url = base_url.rstrip("/")
-        self.token = os.environ.get(token_env)
+        resolved = (token or "").strip()
+        self.token = resolved or os.environ.get(token_env)
 
     def _client(self) -> httpx.AsyncClient:
         headers = {"Accept": "application/json"}
@@ -28,12 +32,33 @@ class GitlabClient:
     def _project_path(repo: str) -> str:
         return quote(repo, safe="")
 
-    async def list_issues(self, repo: str, *, state: str = "open", limit: int = 100) -> list[IssueRecord]:
-        params = {"state": "opened" if state == "open" else state, "per_page": min(100, limit)}
+    async def list_issues(
+        self, repo: str, *, state: str = "open", limit: int | None = 100
+    ) -> list[IssueRecord]:
+        remaining = limit
+        page = 1
+        records: list[IssueRecord] = []
         async with self._client() as client:
-            r = await client.get(f"/projects/{self._project_path(repo)}/issues", params=params)
-            r.raise_for_status()
-            return [self._parse(item) for item in r.json()[:limit]]
+            while True:
+                per_page = min(100, remaining) if remaining is not None else 100
+                params = {
+                    "state": "opened" if state == "open" else state,
+                    "per_page": per_page,
+                    "page": page,
+                }
+                r = await client.get(f"/projects/{self._project_path(repo)}/issues", params=params)
+                r.raise_for_status()
+                page_items = r.json()
+                if not page_items:
+                    break
+                parsed = [self._parse(item) for item in page_items]
+                records.extend(parsed)
+                if remaining is not None:
+                    remaining -= len(parsed)
+                    if remaining <= 0:
+                        break
+                page += 1
+        return records
 
     async def get_issue(self, repo: str, number: int) -> IssueRecord:
         async with self._client() as client:

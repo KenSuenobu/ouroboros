@@ -191,6 +191,9 @@ export default function ProjectsPage() {
             title="Projects"
             items={projects.map((p) => ({ id: p.id, primary: p.name, secondary: p.repo_url }))}
             activeId={activeId}
+            searchable
+            searchPlaceholder="Search projects"
+            emptySearchLabel="No projects match your search"
             onSelect={(id) => {
               setActiveId(id);
               setDraft(null);

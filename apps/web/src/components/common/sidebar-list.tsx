@@ -1,7 +1,8 @@
 "use client";
 
-import { Flex, Text } from "@radix-ui/themes";
+import { Flex, Text, TextField } from "@radix-ui/themes";
 import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
 
 interface Item {
   id: string;
@@ -17,9 +18,33 @@ interface Props {
   onSelect: (id: string) => void;
   onAdd?: () => void;
   emptyLabel?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptySearchLabel?: string;
 }
 
-export function SidebarList({ title, items, activeId, onSelect, onAdd, emptyLabel }: Props) {
+export function SidebarList({
+  title,
+  items,
+  activeId,
+  onSelect,
+  onAdd,
+  emptyLabel,
+  searchable = false,
+  searchPlaceholder = "Search",
+  emptySearchLabel = "No matches",
+}: Props) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredItems = useMemo(() => {
+    if (!normalizedQuery) return items;
+    return items.filter((item) => {
+      const primary = item.primary.toLowerCase();
+      const secondary = item.secondary?.toLowerCase() ?? "";
+      return primary.includes(normalizedQuery) || secondary.includes(normalizedQuery);
+    });
+  }, [items, normalizedQuery]);
+
   return (
     <Flex direction="column" gap="2">
       {title || onAdd ? (
@@ -44,12 +69,20 @@ export function SidebarList({ title, items, activeId, onSelect, onAdd, emptyLabe
           ) : null}
         </Flex>
       ) : null}
-      {items.length === 0 ? (
+      {searchable ? (
+        <TextField.Root
+          size="1"
+          placeholder={searchPlaceholder}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      ) : null}
+      {filteredItems.length === 0 ? (
         <Text size="2" color="gray" style={{ padding: 12 }}>
-          {emptyLabel || "(empty)"}
+          {normalizedQuery ? emptySearchLabel : emptyLabel || "(empty)"}
         </Text>
       ) : (
-        items.map((item) => {
+        filteredItems.map((item) => {
           const active = item.id === activeId;
           return (
             <button

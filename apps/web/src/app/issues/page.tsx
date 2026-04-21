@@ -27,6 +27,10 @@ export default function IssuesPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState(true);
+  const [syncingIssues, setSyncingIssues] = useState(false);
+  const [syncIssuesError, setSyncIssuesError] = useState<string | null>(null);
+  const [syncIssuesNote, setSyncIssuesNote] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<{ processed: number; total: number } | null>(null);
 
   const { data: issues = [], isLoading } = useIssues(effectiveProject, stateFilter);
   const { data: roadmap = [] } = useRoadmap(effectiveProject);
@@ -83,8 +87,44 @@ export default function IssuesPage() {
 
   const sync = async () => {
     if (!effectiveProject) return;
-    await api.post(`/api/projects/${effectiveProject}/issues/sync?state=${stateFilter}`);
-    await mutate(`/api/projects/${effectiveProject}/issues?state=${stateFilter}`);
+    setSyncingIssues(true);
+    setSyncIssuesError(null);
+    setSyncIssuesNote(null);
+    setSyncProgress({ processed: 0, total: 0 });
+    try {
+      const started = await api.post<{ job_id: string }>(
+        `/api/projects/${effectiveProject}/issues/sync/start?state=${stateFilter}`,
+      );
+      while (true) {
+        const status = await api.get<{
+          status: "pending" | "fetching" | "applying" | "completed" | "failed";
+          processed: number;
+          total: number;
+          closed_marked: number;
+          error?: string;
+        }>(`/api/projects/${effectiveProject}/issues/sync/${started.job_id}`);
+        setSyncProgress({ processed: status.processed, total: status.total });
+        if (status.status === "failed") {
+          throw new Error(status.error || "Failed to sync issues.");
+        }
+        if (status.status === "completed") {
+          await mutate(`/api/projects/${effectiveProject}/issues?state=${stateFilter}`);
+          const closedNote =
+            stateFilter === "open" && status.closed_marked > 0
+              ? ` (${status.closed_marked} stale issue${status.closed_marked === 1 ? "" : "s"} marked closed)`
+              : "";
+          setSyncIssuesNote(
+            `Synced ${status.total} ${stateFilter} issue${status.total === 1 ? "" : "s"}${closedNote}.`,
+          );
+          break;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+      }
+    } catch (err) {
+      setSyncIssuesError(err instanceof Error ? err.message : "Failed to sync issues.");
+    } finally {
+      setSyncingIssues(false);
+    }
   };
 
   const syncRoadmap = async () => {
@@ -178,9 +218,27 @@ export default function IssuesPage() {
             <TextField.Slot><Search size={14} /></TextField.Slot>
           </TextField.Root>
           <Flex gap="2">
-            <Button variant="soft" onClick={sync} disabled={!effectiveProject}>Sync issues</Button>
+            <Button variant="soft" onClick={sync} disabled={!effectiveProject || syncingIssues}>
+              {syncingIssues ? "Syncing..." : "Sync issues"}
+            </Button>
             <Button variant="soft" onClick={syncRoadmap} disabled={!effectiveProject}>Sync roadmap</Button>
           </Flex>
+          {syncIssuesError ? <Text size="1" color="red">{syncIssuesError}</Text> : null}
+          {syncIssuesNote ? <Text size="1" color="gray">{syncIssuesNote}</Text> : null}
+          {syncingIssues && syncProgress ? (
+            <Flex direction="column" gap="1">
+              <progress
+                value={syncProgress.total ? syncProgress.processed : undefined}
+                max={syncProgress.total || undefined}
+                style={{ width: "100%" }}
+              />
+              <Text size="1" color="gray">
+                {syncProgress.total
+                  ? `${syncProgress.processed} of ${syncProgress.total} tickets synced`
+                  : "Fetching ticket list..."}
+              </Text>
+            </Flex>
+          ) : null}
           <Box style={{ borderTop: "1px solid var(--gray-a5)", paddingTop: 12 }}>
             {grouped.map((group) => (
               <Flex direction="column" gap="1" key={group.key} mb="3">

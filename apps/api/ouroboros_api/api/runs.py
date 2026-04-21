@@ -9,7 +9,7 @@ from pathlib import Path
 import anyio
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import Flow, Intervention, Issue, Project, Run, RunArtifact, RunStep, Workspace
@@ -118,6 +118,54 @@ async def get_run(
     detail = RunDetail.model_validate(run)
     detail.steps = [RunStepOut.model_validate(s) for s in steps]
     return detail
+
+
+@router.delete("/{run_id}", status_code=204)
+async def delete_run(
+    run_id: str,
+    ws: Workspace = Depends(workspace),
+    session: AsyncSession = Depends(db_session),
+) -> None:
+    run = await session.get(Run, run_id)
+    if not run or run.workspace_id != ws.id:
+        raise HTTPException(404, "Run not found")
+    if run_manager.is_running(run.id):
+        raise HTTPException(409, "Run is currently active and cannot be deleted")
+
+    step_ids = list(
+        (
+            await session.execute(
+                select(RunStep.id).where(RunStep.run_id == run.id, RunStep.workspace_id == ws.id)
+            )
+        ).scalars()
+    )
+    if step_ids:
+        await session.execute(
+            delete(RunArtifact).where(
+                RunArtifact.workspace_id == ws.id,
+                RunArtifact.run_step_id.in_(step_ids),
+            )
+        )
+
+    await session.execute(
+        delete(Intervention).where(
+            Intervention.workspace_id == ws.id,
+            Intervention.run_id == run.id,
+        )
+    )
+    await session.execute(
+        delete(RunStep).where(
+            RunStep.workspace_id == ws.id,
+            RunStep.run_id == run.id,
+        )
+    )
+    await session.execute(
+        delete(Run).where(
+            Run.workspace_id == ws.id,
+            Run.id == run.id,
+        )
+    )
+    await session.commit()
 
 
 @router.post("/{run_id}/cancel")

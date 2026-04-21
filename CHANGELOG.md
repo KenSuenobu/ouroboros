@@ -2,6 +2,8 @@
 
 ## 2026-04-20
 
+- Fetching and syncing issues now shows a progress bar to show the issues being syncronized in real time.
+- Adds the ability to clear run records.
 - Adds the ability to test a repository URL when entering it into the projects form.
 - Adds project repository tokens for private repository access.
 - Adds react-flow styling, hover over edges now shows details between the nodes.

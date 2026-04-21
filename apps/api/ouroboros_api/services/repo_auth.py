@@ -17,8 +17,30 @@ def project_access_token(project: Project) -> str | None:
     return token or None
 
 
+def canonical_repo_url(repo_url: str) -> str:
+    """Normalize known SCM URL variants to avoid auth-breaking redirects."""
+    candidate = (repo_url or "").strip()
+    parsed = urlsplit(candidate)
+    if parsed.scheme != "https" or not parsed.netloc:
+        return candidate
+    if parsed.hostname != "www.github.com":
+        return candidate
+
+    auth = ""
+    if parsed.username:
+        auth = quote(parsed.username, safe="")
+        if parsed.password:
+            auth += ":" + quote(parsed.password, safe="")
+        auth += "@"
+    host = "github.com"
+    if parsed.port:
+        host = f"{host}:{parsed.port}"
+    return urlunsplit((parsed.scheme, f"{auth}{host}", parsed.path, parsed.query, parsed.fragment))
+
+
 def repo_url_with_token(repo_url: str, access_token: str | None) -> str:
     """Embed token in HTTPS URL for git clone/authenticated fetches."""
+    repo_url = canonical_repo_url(repo_url)
     if not access_token:
         return repo_url
 

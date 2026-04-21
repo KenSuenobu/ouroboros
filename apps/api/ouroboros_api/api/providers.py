@@ -119,6 +119,23 @@ async def _probe_health(provider: Provider) -> tuple[str, str | None]:
                     return "no-models", "No models returned by /catalog/models"
                 return "ok", None
 
+        if provider.kind == "openai_compatible":
+            base_url = (provider.base_url or "https://api.openai.com").rstrip("/")
+            headers = {
+                "Authorization": f"Bearer {resolved.api_key or ''}",
+                "Accept": "application/json",
+            }
+            async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=10.0) as client:
+                res = await client.get("/v1/models")
+                if res.status_code in {401, 403}:
+                    return "unauthorized", _error_text(res)
+                res.raise_for_status()
+                payload = res.json() or {}
+                models = payload.get("data", []) if isinstance(payload, dict) else []
+                if not models:
+                    return "no-models", "No models returned by /v1/models"
+                return "ok", None
+
     except Exception as exc:
         status = _status_from_http_error(exc)
         if isinstance(exc, httpx.HTTPStatusError):

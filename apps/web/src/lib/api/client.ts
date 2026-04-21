@@ -10,11 +10,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = res.statusText;
-    try {
-      const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
-    } catch {
-      /* ignore */
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        const body = await res.json();
+        detail = body.detail || JSON.stringify(body);
+      } catch {
+        const raw = await res.text();
+        if (raw.trim()) detail = raw.trim();
+      }
+    } else {
+      const raw = await res.text();
+      if (raw.trim()) detail = raw.trim();
     }
     throw new Error(`${res.status}: ${detail}`);
   }

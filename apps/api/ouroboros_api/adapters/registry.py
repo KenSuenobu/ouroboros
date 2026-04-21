@@ -12,11 +12,13 @@ from .base import AdapterRegistry, ProviderRegistry
 from .providers.anthropic import AnthropicProvider
 from .providers.github_models import GithubModelsProvider
 from .providers.ollama import OllamaProvider
+from .providers.openai_compatible import OpenAICompatibleProvider
 
 _provider_registry = ProviderRegistry()
 _provider_registry.register(OllamaProvider())
 _provider_registry.register(AnthropicProvider())
 _provider_registry.register(GithubModelsProvider())
+_provider_registry.register(OpenAICompatibleProvider())
 
 
 _adapter_registry = AdapterRegistry()

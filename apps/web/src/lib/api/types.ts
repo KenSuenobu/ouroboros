@@ -81,7 +81,7 @@ export type Provider = {
   id: string;
   workspace_id: string;
   name: string;
-  kind: "ollama" | "anthropic" | "github_models" | "opencode" | "gh_copilot";
+  kind: "ollama" | "anthropic" | "github_models" | "openai_compatible" | "opencode" | "gh_copilot";
   base_url: string | null;
   has_api_key: boolean;
   config: Record<string, unknown>;

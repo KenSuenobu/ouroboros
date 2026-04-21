@@ -2,6 +2,8 @@
 
 ## 2026-04-20
 
+- Displays version ID in the upper left-hand corner near the app name.
+- Adds support for OpenAI models.
 - Fetching and syncing issues now shows a progress bar to show the issues being syncronized in real time.
 - Adds the ability to clear run records.
 - Adds the ability to test a repository URL when entering it into the projects form.

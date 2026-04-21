@@ -17,12 +17,20 @@ import { useProviderModels, useProviders } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Provider, ProviderHealth, ProviderInput } from "@/lib/api/types";
 
-const KINDS: Array<Provider["kind"]> = ["ollama", "anthropic", "github_models", "opencode", "gh_copilot"];
+const KINDS: Array<Provider["kind"]> = [
+  "ollama",
+  "anthropic",
+  "github_models",
+  "openai_compatible",
+  "opencode",
+  "gh_copilot",
+];
 
 const DEFAULT_BASE_URL: Record<string, string> = {
   ollama: "http://localhost:11434",
   anthropic: "https://api.anthropic.com",
   github_models: "https://models.github.ai",
+  openai_compatible: "https://api.openai.com",
 };
 
 export default function ProvidersPage() {
@@ -190,12 +198,12 @@ export default function ProvidersPage() {
                   </Flex>
                 </Field>
               ) : null}
-              {active && ["ollama", "anthropic", "github_models"].includes(active.kind) ? (
+              {active && ["ollama", "anthropic", "github_models", "openai_compatible"].includes(active.kind) ? (
                 <ProviderModelsPanel providerId={active.id} />
               ) : null}
             </Flex>
           </Box>
-          {active && ["ollama", "anthropic", "github_models"].includes(active.kind) ? (
+          {active && ["ollama", "anthropic", "github_models", "openai_compatible"].includes(active.kind) ? (
             <Box style={{ minWidth: 420, flex: 1 }}>
               <ChatTester providerId={active.id} />
             </Box>
@@ -210,14 +218,21 @@ export default function ProvidersPage() {
 
 function ProviderModelsPanel({ providerId }: { providerId: string }) {
   const { data: models = [] } = useProviderModels(providerId);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const refresh = async () => {
-    await api.post(`/api/providers/${providerId}/models/refresh`);
-    await mutate(`/api/providers/${providerId}/models`);
+    setRefreshError(null);
+    try {
+      await api.post(`/api/providers/${providerId}/models/refresh`);
+      await mutate(`/api/providers/${providerId}/models`);
+    } catch (err) {
+      setRefreshError(err instanceof Error ? err.message : "Failed to refresh models.");
+    }
   };
   return (
     <Field label={`Models (${models.length})`}>
       <Flex direction="column" gap="2">
         <Button variant="soft" onClick={refresh}>Refresh from provider</Button>
+        {refreshError ? <Text size="1" color="red">{refreshError}</Text> : null}
         <Flex direction="column" gap="1" style={{ maxHeight: 200, overflow: "auto" }}>
           {models.map((m) => (
             <Flex key={m.id} align="center" justify="between">

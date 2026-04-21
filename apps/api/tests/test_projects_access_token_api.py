@@ -14,7 +14,7 @@ from ouroboros_api.api import deps
 from ouroboros_api.api import projects as projects_api
 from ouroboros_api.db.models import Base, Project, Workspace
 from ouroboros_api.main import create_app
-from ouroboros_api.services.repo_auth import PROJECT_ACCESS_TOKEN_KEY
+from ouroboros_api.services.repo_auth import PROJECT_ACCESS_TOKEN_KEY, repo_url_with_token
 
 
 @pytest_asyncio.fixture
@@ -229,3 +229,68 @@ async def test_project_repo_test_draft_endpoint_uses_payload_values(
         "default_branch": "develop",
         "access_token": "abc123",
     }
+
+
+def test_repo_url_with_token_normalizes_www_github_host() -> None:
+    with_token = repo_url_with_token(
+        "https://www.github.com/KenSuenobu/objectified-commercial/",
+        "abc123",
+    )
+    assert with_token.startswith("https://x-access-token:abc123@github.com/")
+
+
+def test_repo_access_values_accepts_www_github_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    called: dict[str, str | None] = {}
+
+    def fake_github(owner: str, repo: str, default_branch: str, access_token: str | None) -> tuple[bool, str]:
+        called["owner"] = owner
+        called["repo"] = repo
+        called["default_branch"] = default_branch
+        called["access_token"] = access_token
+        return True, "ok"
+
+    monkeypatch.setattr(projects_api, "_test_github_repo_access", fake_github)
+    ok, message = projects_api._test_repo_access_values(
+        "https://www.github.com/KenSuenobu/objectified-commercial/",
+        "main",
+        "tkn",
+    )
+    assert ok is True
+    assert message == "ok"
+    assert called == {
+        "owner": "KenSuenobu",
+        "repo": "objectified-commercial",
+        "default_branch": "main",
+        "access_token": "tkn",
+    }
+
+
+def test_github_repo_access_returns_scope_details_on_auth_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeResponse:
+        def __init__(self) -> None:
+            self.status_code = 403
+            self.headers = {
+                "x-accepted-oauth-scopes": "repo",
+                "x-oauth-scopes": "read:user",
+            }
+
+        def json(self) -> dict[str, str]:
+            return {"message": "Resource not accessible by personal access token"}
+
+    class FakeClient:
+        def __enter__(self) -> "FakeClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def get(self, _url: str, headers: dict[str, str] | None = None) -> FakeResponse:
+            assert headers is not None
+            assert "Authorization" in headers
+            return FakeResponse()
+
+    monkeypatch.setattr(projects_api.httpx, "Client", lambda *args, **kwargs: FakeClient())
+    ok, message = projects_api._test_github_repo_access("acme", "private-repo", "main", "token-1")
+    assert ok is False
+    assert "required scopes: repo" in message
+    assert "granted scopes: read:user" in message

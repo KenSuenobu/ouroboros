@@ -35,6 +35,7 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProjectInput | null>(null);
+  const [saveNotice, setSaveNotice] = useState<{ type: "ok" | "error"; message: string } | null>(null);
   const [repoTestState, setRepoTestState] = useState<{ status: "idle" | "testing" | "ok" | "error"; message?: string }>({ status: "idle" });
   const [repoTestAlert, setRepoTestAlert] = useState<{
     open: boolean;
@@ -57,6 +58,7 @@ export default function ProjectsPage() {
   const startNew = () => {
     setActiveId(null);
     setDraft({ ...EMPTY });
+    setSaveNotice(null);
   };
 
   const update = (patch: Partial<ProjectInput>) => setDraft({ ...(editing as ProjectInput), ...patch });
@@ -77,20 +79,42 @@ export default function ProjectsPage() {
 
   const onSave = async () => {
     if (!editing) return;
+    setSaveNotice(null);
+    const replacingToken = Boolean(active?.has_access_token && editing.access_token?.trim());
     const payload: ProjectInput = { ...editing };
     if (!payload.access_token?.trim()) {
       delete payload.access_token;
     } else {
       payload.access_token = payload.access_token.trim();
     }
-    if (active) {
-      await api.put<Project>(`/api/projects/${active.id}`, payload);
-    } else {
-      const created = await api.post<Project>("/api/projects", payload);
-      setActiveId(created.id);
+    try {
+      let saved: Project;
+      if (active) {
+        saved = await api.put<Project>(`/api/projects/${active.id}`, payload);
+      } else {
+        saved = await api.post<Project>("/api/projects", payload);
+        setActiveId(saved.id);
+      }
+      setDraft(null);
+      await mutate(
+        "/api/projects",
+        (current: Project[] = []) => {
+          const exists = current.some((project) => project.id === saved.id);
+          if (exists) {
+            return current.map((project) => (project.id === saved.id ? saved : project));
+          }
+          return [...current, saved];
+        },
+        false,
+      );
+      await mutate("/api/projects");
+      if (replacingToken) {
+        setSaveNotice({ type: "ok", message: "Repository access token updated." });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save project changes.";
+      setSaveNotice({ type: "error", message });
     }
-    setDraft(null);
-    await mutate("/api/projects");
   };
 
   const onDelete = async () => {
@@ -107,11 +131,22 @@ export default function ProjectsPage() {
     }
     setRepoTestState({ status: "testing" });
     try {
-      const result = await api.post<{ ok: boolean; message: string }>(`/api/projects/test-repo`, {
-        repo_url: editing.repo_url.trim(),
-        default_branch: editing.default_branch || "main",
-        access_token: editing.access_token?.trim() || undefined,
-      });
+      const explicitToken = editing.access_token?.trim() || undefined;
+      const canUseStoredProjectToken =
+        Boolean(
+          active &&
+            active.has_access_token &&
+            !explicitToken &&
+            active.repo_url === editing.repo_url.trim() &&
+            active.default_branch === (editing.default_branch || "main"),
+        );
+      const result = canUseStoredProjectToken
+        ? await api.post<{ ok: boolean; message: string }>(`/api/projects/${active!.id}/test-repo`)
+        : await api.post<{ ok: boolean; message: string }>(`/api/projects/test-repo`, {
+            repo_url: editing.repo_url.trim(),
+            default_branch: editing.default_branch || "main",
+            access_token: explicitToken,
+          });
       setRepoTestState({ status: result.ok ? "ok" : "error", message: result.message });
       setRepoTestAlert({
         open: true,
@@ -197,6 +232,7 @@ export default function ProjectsPage() {
             onSelect={(id) => {
               setActiveId(id);
               setDraft(null);
+              setSaveNotice(null);
             }}
             onAdd={startNew}
             emptyLabel={isLoading ? "Loading..." : "No projects yet"}
@@ -248,7 +284,12 @@ export default function ProjectsPage() {
                 onChange={(e) => update({ access_token: e.target.value })}
               />
               {active?.has_access_token ? (
-                <Text mt="1" size="1" color="gray">A token is already stored; enter a new one to replace it.</Text>
+                <Text mt="1" size="1" color="gray">A token is currently stored. Leave this blank to keep it, or enter a new token and click Save to replace it.</Text>
+              ) : null}
+              {saveNotice ? (
+                <Text mt="1" size="1" color={saveNotice.type === "error" ? "red" : "green"}>
+                  {saveNotice.message}
+                </Text>
               ) : null}
               {isGithubRepo ? (
                 <Flex mt="2" direction="column" gap="2">

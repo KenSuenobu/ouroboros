@@ -15,6 +15,7 @@ from ..config import settings
 from ..db.models import Project, Workspace
 from ..services.repo_auth import (
     PROJECT_ACCESS_TOKEN_KEY,
+    canonical_repo_url,
     project_access_token,
     redact_access_token,
     repo_url_with_token,
@@ -70,14 +71,17 @@ def _apply_access_token(project: Project, payload: ProjectIn) -> None:
 
 
 def _is_github_repo_url(repo_url: str) -> bool:
-    candidate = repo_url.strip().lower()
-    return candidate.startswith("https://github.com/") or candidate.startswith("git@github.com:")
+    candidate = repo_url.strip()
+    parsed = urlsplit(candidate)
+    if parsed.scheme == "https" and parsed.hostname in {"github.com", "www.github.com"}:
+        return True
+    return candidate.lower().startswith("git@github.com:")
 
 
 def _parse_github_owner_repo(repo_url: str) -> tuple[str, str] | None:
-    candidate = repo_url.strip()
-    if candidate.lower().startswith("https://github.com/"):
-        parsed = urlsplit(candidate)
+    candidate = canonical_repo_url(repo_url)
+    parsed = urlsplit(candidate)
+    if parsed.scheme == "https" and parsed.hostname == "github.com":
         parts = [p for p in parsed.path.split("/") if p]
         if len(parts) < 2:
             return None
@@ -98,31 +102,75 @@ def _parse_github_owner_repo(repo_url: str) -> tuple[str, str] | None:
 def _test_github_repo_access(
     owner: str, repo: str, default_branch: str, access_token: str | None
 ) -> tuple[bool, str]:
-    headers = {"Accept": "application/vnd.github+json"}
+    base_headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "ouroboros-api/repo-check",
+    }
+    auth_headers = [None]
     if access_token:
-        headers["Authorization"] = f"Bearer {access_token}"
+        # GitHub supports bearer-style tokens, while some setups still expect "token".
+        auth_headers = [f"Bearer {access_token}", f"token {access_token}"]
+
+    def auth_error_message(response: httpx.Response) -> str:
+        detail = ""
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                detail = str(payload.get("message") or "")
+        except Exception:
+            detail = ""
+        granted = (response.headers.get("x-oauth-scopes") or "").strip()
+        required = (response.headers.get("x-accepted-oauth-scopes") or "").strip()
+        parts = [detail or "GitHub authentication failed."]
+        if required:
+            parts.append(f"required scopes: {required}")
+        if granted:
+            parts.append(f"granted scopes: {granted}")
+        if not required and not granted:
+            parts.append(
+                "Ensure the token can access this repository "
+                "(classic PAT: repo; fine-grained PAT: repository access + Contents: Read)."
+            )
+        return " ".join(parts)
+
     try:
-        with httpx.Client(timeout=8.0, headers=headers, follow_redirects=True) as client:
-            repo_res = client.get(f"https://api.github.com/repos/{owner}/{repo}")
-            if repo_res.status_code == 200:
-                branch_res = client.get(
-                    f"https://api.github.com/repos/{owner}/{repo}/branches/{default_branch}"
-                )
-                if branch_res.status_code == 200:
-                    return True, "Repository is reachable and branch is accessible."
-                if branch_res.status_code == 404:
-                    return False, f"Repository is reachable, but branch {default_branch!r} was not found."
-                return False, f"Repository reachable, but branch check failed ({branch_res.status_code})."
-            if repo_res.status_code == 404:
-                if access_token:
-                    return False, "Repository not found or token lacks permission."
-                return (
-                    False,
-                    "Repository not publicly accessible. Add a repository access token for private repos.",
-                )
-            if repo_res.status_code in {401, 403}:
-                return False, "GitHub authentication failed or token lacks required scope."
-            return False, f"GitHub repository check failed ({repo_res.status_code})."
+        with httpx.Client(timeout=8.0, headers=base_headers, follow_redirects=True) as client:
+            last_auth_message: str | None = None
+            for auth_header in auth_headers:
+                headers = dict(base_headers)
+                if auth_header:
+                    headers["Authorization"] = auth_header
+                repo_res = client.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers)
+                if repo_res.status_code in {401, 403}:
+                    last_auth_message = auth_error_message(repo_res)
+                    continue
+                if repo_res.status_code == 200:
+                    branch_res = client.get(
+                        f"https://api.github.com/repos/{owner}/{repo}/branches/{default_branch}",
+                        headers=headers,
+                    )
+                    if branch_res.status_code == 200:
+                        return True, "Repository is reachable and branch is accessible."
+                    if branch_res.status_code == 404:
+                        return False, f"Repository is reachable, but branch {default_branch!r} was not found."
+                    if branch_res.status_code in {401, 403}:
+                        return False, auth_error_message(branch_res)
+                    return False, f"Repository reachable, but branch check failed ({branch_res.status_code})."
+                if repo_res.status_code == 404:
+                    if access_token:
+                        return (
+                            False,
+                            "Repository not found. If this is private, ensure the token has repository access "
+                            "(classic PAT: repo; fine-grained PAT: repository access + Contents: Read).",
+                        )
+                    return (
+                        False,
+                        "Repository not publicly accessible. Add a repository access token for private repos.",
+                    )
+                return False, f"GitHub repository check failed ({repo_res.status_code})."
+            if last_auth_message:
+                return False, last_auth_message
+            return False, "GitHub repository check failed."
     except httpx.TimeoutException:
         return False, "GitHub API check timed out."
     except Exception as exc:

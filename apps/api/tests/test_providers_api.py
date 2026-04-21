@@ -169,3 +169,46 @@ async def test_probe_health_marks_anthropic_401_as_unauthorized(
     assert status == "unauthorized"
     assert error is not None
     assert "invalid x-api-key" in error
+
+
+@pytest.mark.asyncio
+async def test_probe_health_marks_openai_compatible_401_as_unauthorized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResponse:
+        status_code = 401
+        reason_phrase = "Unauthorized"
+        text = '{"error":"invalid api key"}'
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"error": "invalid api key"}
+
+    class FakeClient:
+        async def __aenter__(self) -> FakeClient:
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+        async def get(self, _path: str) -> FakeResponse:
+            return FakeResponse()
+
+    monkeypatch.setattr(providers_api.httpx, "AsyncClient", lambda **_: FakeClient())
+
+    provider = Provider(
+        id="provider-id",
+        workspace_id="workspace-id",
+        name="OpenAI Compatible",
+        kind="openai_compatible",
+        base_url="https://api.openai.com",
+        config={},
+        enabled=True,
+    )
+    status, error = await providers_api._probe_health(provider)
+
+    assert status == "unauthorized"
+    assert error is not None
+    assert "invalid api key" in error

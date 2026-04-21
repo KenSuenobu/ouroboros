@@ -28,6 +28,12 @@ beforeEach(() => {
           headers: { "content-type": "application/json" },
         });
       }
+      if (url === "/api/plain-boom") {
+        return new Response("Failed to query provider: upstream unavailable", {
+          status: 502,
+          headers: { "content-type": "text/plain" },
+        });
+      }
       if (url === "/api/empty") {
         return new Response(null, { status: 204 });
       }
@@ -53,6 +59,10 @@ describe("api client", () => {
 
   it("throws with detail on non-2xx", async () => {
     await expect(api.get("/api/boom")).rejects.toThrow(/kaboom/);
+  });
+
+  it("throws with plain-text detail on non-json errors", async () => {
+    await expect(api.get("/api/plain-boom")).rejects.toThrow(/Failed to query provider/);
   });
 
   it("returns undefined on 204", async () => {

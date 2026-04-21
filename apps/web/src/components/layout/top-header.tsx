@@ -28,6 +28,7 @@ const NAV: Array<{ href: string; label: string; Icon: typeof FolderTree }> = [
   { href: "/mcp", label: "MCP", Icon: Boxes },
   { href: "/routing", label: "Routing", Icon: Workflow },
 ];
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "dev";
 
 export function TopHeader() {
   const pathname = usePathname();
@@ -44,7 +45,7 @@ export function TopHeader() {
       <Flex align="center" gap="3">
         <InfinityIcon size={22} color="var(--accent-9)" />
         <Text size="4" weight="bold">Ouroboros</Text>
-        <Badge size="1" color="gray" variant="soft">v0.1</Badge>
+        <Badge size="1" color="gray" variant="soft">v{APP_VERSION}</Badge>
       </Flex>
       <Flex gap="1">
         {NAV.map(({ href, label, Icon }) => {

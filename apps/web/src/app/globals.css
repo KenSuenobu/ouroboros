@@ -5,62 +5,346 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #__next { height: 100%; }
-body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif); }
+/* ============================================================
+   Design tokens
+   ============================================================ */
 
-.app-shell {
-  display: grid;
-  grid-template-rows: 56px 1fr;
-  height: 100vh;
+:root {
+  --ob-rail: 56px;
+  --ob-topbar-h: 44px;
+  --ob-list-w: 280px;
+  --ob-content-max: 1180px;
+
+  --ob-space-1: 4px;
+  --ob-space-2: 8px;
+  --ob-space-3: 12px;
+  --ob-space-4: 16px;
+  --ob-space-5: 24px;
+  --ob-space-6: 32px;
+  --ob-space-7: 48px;
+
+  --ob-radius-sm: 6px;
+  --ob-radius-md: 8px;
+  --ob-radius-lg: 12px;
+
+  --ob-surface-0: var(--color-background);
+  --ob-surface-1: var(--gray-a2);
+  --ob-surface-2: var(--gray-a3);
+  --ob-border: var(--gray-a4);
+  --ob-border-strong: var(--gray-a6);
+
+  --ob-text-1: var(--gray-12);
+  --ob-text-2: var(--gray-11);
+  --ob-text-3: var(--gray-10);
+
+  --ob-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
 }
 
-.app-body {
+html, body, #__next { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--default-font-family, system-ui, sans-serif);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ob-text-1);
+  background: var(--ob-surface-0);
+}
+
+/* ============================================================
+   App shell — icon rail + topbar + content region
+   ============================================================ */
+
+.ob-shell {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--ob-rail) 1fr;
+  grid-template-rows: 100vh;
+  height: 100vh;
   overflow: hidden;
 }
 
-.app-sidebar {
-  border-right: 1px solid var(--gray-a5);
+.ob-region {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--ob-surface-0);
+}
+
+.ob-content {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+}
+
+/* When a page renders a PageShell sidebar, give it its own column. */
+.ob-content:has(> .app-sidebar) {
+  grid-template-columns: minmax(240px, var(--ob-list-w)) 1fr;
+}
+
+/* ----------- Icon rail ----------- */
+
+.ob-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ob-space-2);
+  padding: var(--ob-space-3) 0;
+  border-right: 1px solid var(--ob-border);
+  background: var(--gray-a1);
   overflow-y: auto;
-  padding: 12px;
+}
+
+.ob-rail-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ob-radius-md);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent-9), var(--accent-11));
+  color: white;
+  margin-bottom: var(--ob-space-3);
+  text-decoration: none;
+}
+
+.ob-rail-divider {
+  width: 24px;
+  height: 1px;
+  background: var(--ob-border);
+  margin: var(--ob-space-1) 0;
+}
+
+.ob-rail-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ob-radius-sm);
+  color: var(--ob-text-2);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  position: relative;
+  text-decoration: none;
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.ob-rail-btn:hover {
+  background: var(--gray-a3);
+  color: var(--ob-text-1);
+}
+
+.ob-rail-btn[data-active="true"] {
+  background: var(--accent-a4);
+  color: var(--accent-12);
+}
+
+.ob-rail-btn[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent-9);
+}
+
+.ob-rail-tip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--gray-12);
+  color: var(--gray-1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms ease;
+  z-index: 60;
+}
+
+.ob-rail-btn:hover .ob-rail-tip { opacity: 1; }
+
+.ob-rail-spacer { flex: 1; }
+
+/* ----------- Topbar ----------- */
+
+.ob-topbar {
+  height: var(--ob-topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--ob-space-5);
+  border-bottom: 1px solid var(--ob-border);
+  gap: var(--ob-space-4);
+  flex-shrink: 0;
+}
+
+.ob-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--ob-text-2);
+  min-width: 0;
+}
+
+.ob-crumbs a {
+  color: var(--ob-text-2);
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.ob-crumbs a:hover { background: var(--gray-a3); color: var(--ob-text-1); }
+.ob-crumbs strong {
+  color: var(--ob-text-1);
+  font-weight: 600;
+  padding: 2px 6px;
+}
+.ob-crumbs .ob-sep { color: var(--ob-text-3); }
+
+.ob-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-space-2);
+}
+
+.ob-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ob-space-2);
+  padding: 4px 8px 4px 10px;
+  border-radius: var(--ob-radius-sm);
+  background: var(--gray-a2);
+  border: 1px solid var(--ob-border);
+  color: var(--ob-text-3);
+  cursor: pointer;
+  font-size: 12.5px;
+  height: 28px;
+  min-width: 220px;
+  font: inherit;
+  font-size: 12.5px;
+}
+.ob-search-trigger:hover { background: var(--gray-a3); color: var(--ob-text-2); }
+.ob-search-trigger-label { flex: 1; text-align: left; }
+
+.ob-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ob-radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ob-text-2);
+  cursor: pointer;
+}
+.ob-icon-btn:hover { background: var(--gray-a3); color: var(--ob-text-1); }
+
+.ob-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--ob-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--ob-mono);
+  font-size: 10.5px;
+  color: var(--ob-text-2);
+  background: var(--ob-surface-0);
+}
+
+.ob-workspace-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border: 1px solid var(--ob-border-strong);
+  color: var(--ob-text-2);
+  background: var(--gray-a2);
+  height: 22px;
+  line-height: 1;
+}
+.ob-workspace-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-9);
+}
+
+/* ============================================================
+   PageShell sidebar/main — backward-compatible classes used
+   by every existing page. Restyled to live inside .ob-content.
+   ============================================================ */
+
+.app-sidebar {
+  border-right: 1px solid var(--ob-border);
+  background: var(--gray-a1);
+  overflow-y: auto;
+  padding: var(--ob-space-3);
+  min-width: 0;
 }
 
 .app-main {
-  overflow: auto;
-  padding: 16px 20px;
+  overflow-y: auto;
+  padding: var(--ob-space-6) var(--ob-space-5);
+  min-width: 0;
 }
+
+/* Cap form/content width on huge monitors so things stop stretching. */
+.app-main > * {
+  max-width: var(--ob-content-max);
+}
+.app-main > .flow-wrapper { max-width: none; }
+
+/* ============================================================
+   Empty state
+   ============================================================ */
 
 .empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 240px;
-  color: var(--gray-11);
-  border: 1px dashed var(--gray-a5);
-  border-radius: 8px;
+  color: var(--ob-text-2);
+  border: 1px dashed var(--ob-border-strong);
+  border-radius: var(--ob-radius-md);
 }
 
-.flow-wrapper { height: calc(100vh - 220px); border: 1px solid var(--gray-a5); border-radius: 8px; }
+.flow-wrapper {
+  height: calc(100vh - var(--ob-topbar-h) - 220px);
+  border: 1px solid var(--ob-border-strong);
+  border-radius: var(--ob-radius-md);
+}
+
+/* ============================================================
+   Issue markdown — unchanged.
+   ============================================================ */
 
 .issue-markdown {
-  color: var(--gray-12);
+  color: var(--ob-text-1);
   line-height: 1.65;
 }
 
-.issue-markdown > :first-child {
-  margin-top: 0;
-}
-
-.issue-markdown > :last-child {
-  margin-bottom: 0;
-}
+.issue-markdown > :first-child { margin-top: 0; }
+.issue-markdown > :last-child { margin-bottom: 0; }
 
 .issue-markdown h1,
 .issue-markdown h2,
 .issue-markdown h3,
 .issue-markdown h4 {
-  color: var(--gray-12);
+  color: var(--ob-text-1);
   line-height: 1.25;
   margin: 1rem 0 0.5rem;
 }
@@ -72,7 +356,7 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
 
 .issue-markdown p {
   margin: 0.6rem 0;
-  color: var(--gray-12);
+  color: var(--ob-text-1);
 }
 
 .issue-markdown ul,
@@ -81,9 +365,7 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
   padding-left: 1.25rem;
 }
 
-.issue-markdown li + li {
-  margin-top: 0.25rem;
-}
+.issue-markdown li + li { margin-top: 0.25rem; }
 
 .issue-markdown a {
   color: var(--iris-11);
@@ -91,15 +373,13 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
   text-underline-offset: 2px;
 }
 
-.issue-markdown a:hover {
-  color: var(--iris-10);
-}
+.issue-markdown a:hover { color: var(--iris-10); }
 
 .issue-markdown code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--ob-mono);
   font-size: 0.9em;
-  background: var(--gray-a3);
-  border: 1px solid var(--gray-a5);
+  background: var(--ob-surface-2);
+  border: 1px solid var(--ob-border);
   border-radius: 4px;
   padding: 0.1rem 0.3rem;
 }
@@ -108,9 +388,9 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
   margin: 0.8rem 0;
   padding: 0.75rem;
   overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid var(--gray-a5);
-  background: var(--gray-a3);
+  border-radius: var(--ob-radius-md);
+  border: 1px solid var(--ob-border);
+  background: var(--ob-surface-2);
 }
 
 .issue-markdown pre code {
@@ -123,13 +403,13 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
 .issue-markdown blockquote {
   margin: 0.8rem 0;
   padding: 0.25rem 0 0.25rem 0.8rem;
-  border-left: 3px solid var(--gray-a6);
-  color: var(--gray-11);
+  border-left: 3px solid var(--ob-border-strong);
+  color: var(--ob-text-2);
 }
 
 .issue-markdown hr {
   border: 0;
-  border-top: 1px solid var(--gray-a6);
+  border-top: 1px solid var(--ob-border-strong);
   margin: 1rem 0;
 }
 
@@ -142,13 +422,13 @@ body { margin: 0; font-family: var(--default-font-family, system-ui, sans-serif)
 
 .issue-markdown th,
 .issue-markdown td {
-  border: 1px solid var(--gray-a6);
+  border: 1px solid var(--ob-border-strong);
   padding: 0.45rem 0.55rem;
   text-align: left;
   vertical-align: top;
 }
 
 .issue-markdown th {
-  background: var(--gray-a3);
-  color: var(--gray-12);
+  background: var(--ob-surface-2);
+  color: var(--ob-text-1);
 }

@@ -15,6 +15,8 @@ from ouroboros_api.db.models import Base, Issue, Project, Workspace
 from ouroboros_api.main import create_app
 from ouroboros_api.scm.base import IssueRecord
 
+from ._auth import install_test_admin
+
 
 @pytest_asyncio.fixture
 async def app_and_session(
@@ -80,6 +82,7 @@ async def app_and_session(
             yield session
 
     app.dependency_overrides[deps.db_session] = override_db_session
+    await install_test_admin(app, session_factory)
     try:
         yield app, session_factory
     finally:

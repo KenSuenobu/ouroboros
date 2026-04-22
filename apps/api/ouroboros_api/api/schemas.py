@@ -366,3 +366,65 @@ class InterventionOut(_Base):
     answer: dict[str, Any] | None = None
     status: str
     answered_at: datetime | None = None
+
+
+class WorkspaceMembershipOut(_Base):
+    workspace_id: str
+    workspace_slug: str
+    workspace_name: str
+    role: str
+
+
+class UserOut(_Base):
+    id: str
+    email: str
+    display_name: str
+    is_active: bool
+    last_login_at: datetime | None = None
+    created_at: datetime
+    has_password: bool = True
+    linked_oauth: list[str] = Field(default_factory=list)
+
+
+class CurrentUserOut(UserOut):
+    memberships: list[WorkspaceMembershipOut] = Field(default_factory=list)
+
+
+class AdminUserOut(UserOut):
+    role: str
+
+
+class AuthStatusOut(_Base):
+    needs_setup: bool
+    open_registration: bool
+    github_oauth_enabled: bool
+
+
+class AuthSetupIn(_Base):
+    email: str
+    password: str
+    display_name: str | None = None
+
+
+class AuthLoginIn(_Base):
+    email: str
+    password: str
+
+
+class UserCreateIn(_Base):
+    email: str
+    password: str | None = None
+    display_name: str | None = None
+    role: str = "member"
+
+
+class UserUpdateIn(_Base):
+    display_name: str | None = None
+    is_active: bool | None = None
+    role: str | None = None
+    password: str | None = None
+
+
+class PasswordChangeIn(_Base):
+    current_password: str | None = None
+    new_password: str

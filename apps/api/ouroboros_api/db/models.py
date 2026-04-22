@@ -269,6 +269,73 @@ class RunArtifact(Base, TimestampMixin):
     meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class User(Base, TimestampMixin):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(512))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    memberships: Mapped[list[WorkspaceMembership]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class WorkspaceMembership(Base, TimestampMixin):
+    __tablename__ = "workspace_members"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"), index=True, nullable=False
+    )
+    # role in {"admin", "member"}
+    role: Mapped[str] = mapped_column(String(32), default="member", nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="memberships")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "workspace_id", name="uq_workspace_member"),
+    )
+
+
+class Session(Base, TimestampMixin):
+    __tablename__ = "sessions"
+
+    # id stores the SHA-256 hash of the opaque cookie token; the raw token
+    # is only ever held by the client, never persisted server-side.
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+
+
+class OAuthAccount(Base, TimestampMixin):
+    __tablename__ = "oauth_accounts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_account_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    access_token_secret_ref: Mapped[str | None] = mapped_column(String(200))
+
+    user: Mapped[User] = relationship(back_populates="oauth_accounts")
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_account_id", name="uq_oauth_account_provider"),
+    )
+
+
 class Intervention(Base, TimestampMixin):
     __tablename__ = "interventions"
 

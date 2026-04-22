@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Flex,
+  Heading,
   Select,
   Text,
   TextField,
@@ -16,6 +17,7 @@ import { HealthBadge } from "@/components/provider-health-badge";
 import { useProviderModels, useProviders } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Provider, ProviderHealth, ProviderInput } from "@/lib/api/types";
+import { RequireAdmin } from "@/lib/auth/guards";
 
 const KINDS: Array<Provider["kind"]> = [
   "ollama",
@@ -33,7 +35,29 @@ const DEFAULT_BASE_URL: Record<string, string> = {
   openai_compatible: "https://api.openai.com",
 };
 
+function AdminOnlyFallback({ feature }: { feature: string }) {
+  return (
+    <PageShell sidebar={<div />}>
+      <PageHeader title={feature} />
+      <Box p="5">
+        <Heading size="4" mb="2">Admins only</Heading>
+        <Text size="2" color="gray">
+          You need admin access in this workspace to manage {feature.toLowerCase()}.
+        </Text>
+      </Box>
+    </PageShell>
+  );
+}
+
 export default function ProvidersPage() {
+  return (
+    <RequireAdmin fallback={<AdminOnlyFallback feature="Providers" />}>
+      <ProvidersPageInner />
+    </RequireAdmin>
+  );
+}
+
+function ProvidersPageInner() {
   const { data: providers = [] } = useProviders();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProviderInput | null>(null);

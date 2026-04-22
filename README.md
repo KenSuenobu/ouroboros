@@ -31,7 +31,20 @@ make migrate       # creates the SQLite db and seeds defaults
 make dev           # runs api on :8000 and web on :3000 in parallel via Turborepo
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000 and visit `/setup` to create the first admin
+account. After that, sign in at `/login` (email + password, or "Sign in with
+GitHub" if you've configured `OUROBOROS_LOGIN_GITHUB_OAUTH_CLIENT_ID` and the
+matching client secret). Members can run flows and intervene in runs; admins
+also manage providers, agents, MCP servers, flows, and other users at
+`/admin/users`.
+
+You can skip the setup screen by exporting these env vars before `make migrate`:
+
+```bash
+export OUROBOROS_AUTH_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+export OUROBOROS_AUTH_BOOTSTRAP_ADMIN_PASSWORD=change-me-now
+export OUROBOROS_AUTH_BOOTSTRAP_ADMIN_NAME="Admin"
+```
 
 The monorepo uses [Yarn workspaces](https://yarnpkg.com/features/workspaces)
 plus [Turborepo](https://turbo.build/), so both apps boot from a single
@@ -64,7 +77,7 @@ corepack prepare yarn@4.5.3 --activate
 ```
 apps/api/    FastAPI orchestrator (Python)
 apps/web/    Next.js 15 App Router UI
-apps/cli/    Optional CLI: `ouroboros run <project> <issue>`
+apps/cli/    Command-line client: `ouroboros login|logout|whoami`
 data/        Runtime state: SQLite, run sandboxes, artifacts, logs
 docs/        Design docs and roadmaps
 ```
@@ -74,5 +87,6 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design and
 
 ## License
 
-MIT for the open-core (orchestrator + adapters + UI). Hosted runtime, billing,
-marketplace, SSO and RBAC are commercial - see `BUSINESS_MODEL.md`.
+MIT for the open-core (orchestrator + adapters + UI, including basic auth and
+per-workspace admin/member RBAC). Hosted runtime, billing, marketplace, SSO,
+SCIM, audit and policy-based RBAC are commercial - see `BUSINESS_MODEL.md`.

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import Flow, Workspace
-from .deps import db_session, workspace
+from .deps import db_session, require_admin, workspace
 from .schemas import FlowIn, FlowOut
 
 router = APIRouter(prefix="/api/flows", tags=["flows"])
@@ -23,7 +23,7 @@ async def list_flows(
     return [FlowOut.model_validate(f) for f in res.scalars()]
 
 
-@router.post("", response_model=FlowOut, status_code=201)
+@router.post("", response_model=FlowOut, status_code=201, dependencies=[Depends(require_admin)])
 async def create_flow(
     payload: FlowIn,
     ws: Workspace = Depends(workspace),
@@ -54,7 +54,7 @@ async def get_flow(
     return FlowOut.model_validate(flow)
 
 
-@router.put("/{flow_id}", response_model=FlowOut)
+@router.put("/{flow_id}", response_model=FlowOut, dependencies=[Depends(require_admin)])
 async def update_flow(
     flow_id: str,
     payload: FlowIn,
@@ -74,7 +74,7 @@ async def update_flow(
     return FlowOut.model_validate(flow)
 
 
-@router.delete("/{flow_id}", status_code=204)
+@router.delete("/{flow_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_flow(
     flow_id: str,
     ws: Workspace = Depends(workspace),

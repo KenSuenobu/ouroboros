@@ -3,18 +3,39 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { mutate } from "swr";
-import { Badge, Box, Button, Flex, Select, Text, TextField } from "@radix-ui/themes";
+import { Badge, Box, Button, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
 import { PageShell, PageHeader } from "@/components/layout/page-shell";
 import { SidebarList } from "@/components/common/sidebar-list";
 import { useAgents, useFlows } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Flow, FlowEdge, FlowNode } from "@/lib/api/types";
+import { RequireAdmin } from "@/lib/auth/guards";
 
 const FlowDesigner = dynamic(() => import("@/components/flow/flow-designer").then((m) => m.FlowDesigner), { ssr: false });
 
 const EMPTY_GRAPH = { nodes: [] as FlowNode[], edges: [] as FlowEdge[] };
 
 export default function RoutingPage() {
+  return (
+    <RequireAdmin
+      fallback={
+        <PageShell sidebar={<div />}>
+          <PageHeader title="Routing" />
+          <Box p="5">
+            <Heading size="4" mb="2">Admins only</Heading>
+            <Text size="2" color="gray">
+              You need admin access in this workspace to manage flows and routing.
+            </Text>
+          </Box>
+        </PageShell>
+      }
+    >
+      <RoutingPageInner />
+    </RequireAdmin>
+  );
+}
+
+function RoutingPageInner() {
   const { data: flows = [] } = useFlows();
   const { data: agents = [] } = useAgents();
   const [activeId, setActiveId] = useState<string | null>(null);

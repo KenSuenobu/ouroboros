@@ -8,20 +8,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.models import McpServer, Workspace
 from ..mcp import McpManager, RegistryClient
-from .deps import db_session, workspace
+from .deps import current_user, db_session, require_admin, workspace
 from .schemas import McpInstallRequest, McpRegistryEntry, McpServerOut, McpToolInvokeRequest
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 _registry = RegistryClient()
 
 
-@router.get("/registry", response_model=list[McpRegistryEntry])
+@router.get(
+    "/registry", response_model=list[McpRegistryEntry], dependencies=[Depends(current_user)]
+)
 async def browse_registry(q: str | None = None, limit: int = 100) -> list[McpRegistryEntry]:
     items = await _registry.list_servers(q=q, limit=limit)
     return [McpRegistryEntry(**i) for i in items]
 
 
-@router.get("/registry/{server_id}", response_model=McpRegistryEntry)
+@router.get(
+    "/registry/{server_id}",
+    response_model=McpRegistryEntry,
+    dependencies=[Depends(current_user)],
+)
 async def get_registry_entry(server_id: str) -> McpRegistryEntry:
     item = await _registry.get_server(server_id)
     if not item:
@@ -39,7 +45,12 @@ async def list_servers(
     return [McpServerOut.model_validate(s) for s in res.scalars()]
 
 
-@router.post("/servers", response_model=McpServerOut, status_code=201)
+@router.post(
+    "/servers",
+    response_model=McpServerOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
 async def install_server(
     payload: McpInstallRequest,
     ws: Workspace = Depends(workspace),
@@ -61,7 +72,7 @@ async def install_server(
     return McpServerOut.model_validate(server)
 
 
-@router.delete("/servers/{server_id}", status_code=204)
+@router.delete("/servers/{server_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_server(
     server_id: str,
     ws: Workspace = Depends(workspace),
@@ -91,7 +102,7 @@ async def list_tools(
     return {"tools": tools, "error": error}
 
 
-@router.post("/servers/{server_id}/invoke")
+@router.post("/servers/{server_id}/invoke", dependencies=[Depends(require_admin)])
 async def invoke_tool(
     server_id: str,
     payload: McpToolInvokeRequest,

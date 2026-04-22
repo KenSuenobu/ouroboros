@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Flex,
+  Heading,
   Select,
   Tabs,
   Text,
@@ -19,6 +20,7 @@ import { SidebarList } from "@/components/common/sidebar-list";
 import { useAgents, useProviders } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { Agent, AgentInput } from "@/lib/api/types";
+import { RequireAdmin } from "@/lib/auth/guards";
 
 const MonacoPrompt = dynamic(() => import("@/components/editors/prompt-editor").then((m) => m.PromptEditor), { ssr: false });
 
@@ -44,6 +46,26 @@ const EMPTY: AgentInput = {
 };
 
 export default function AgentsPage() {
+  return (
+    <RequireAdmin
+      fallback={
+        <PageShell sidebar={<div />}>
+          <PageHeader title="Agents" />
+          <Box p="5">
+            <Heading size="4" mb="2">Admins only</Heading>
+            <Text size="2" color="gray">
+              You need admin access in this workspace to manage agents.
+            </Text>
+          </Box>
+        </PageShell>
+      }
+    >
+      <AgentsPageInner />
+    </RequireAdmin>
+  );
+}
+
+function AgentsPageInner() {
   const { data: agents = [] } = useAgents();
   const { data: providers = [] } = useProviders();
   const [activeId, setActiveId] = useState<string | null>(null);

@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.models import Project, Provider, Workspace
-from .deps import db_session, workspace
+from ..db.models import Project, Provider, User, Workspace, WorkspaceMembership
+from .deps import current_user, db_session, require_admin, workspace
 from .schemas import WorkspaceMeOut, WorkspaceOnboardingIn, WorkspaceOut
 
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
@@ -39,8 +39,16 @@ async def _workspace_status(session: AsyncSession, ws: Workspace) -> WorkspaceMe
 
 
 @router.get("", response_model=list[WorkspaceOut])
-async def list_workspaces(session: AsyncSession = Depends(db_session)) -> list[WorkspaceOut]:
-    res = await session.execute(select(Workspace).order_by(Workspace.created_at))
+async def list_workspaces(
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(db_session),
+) -> list[WorkspaceOut]:
+    res = await session.execute(
+        select(Workspace)
+        .join(WorkspaceMembership, WorkspaceMembership.workspace_id == Workspace.id)
+        .where(WorkspaceMembership.user_id == user.id)
+        .order_by(Workspace.created_at)
+    )
     return [WorkspaceOut.model_validate(w) for w in res.scalars()]
 
 
@@ -52,7 +60,9 @@ async def get_workspace_me(
     return await _workspace_status(session, ws)
 
 
-@router.post("/me/onboarding", response_model=WorkspaceMeOut)
+@router.post(
+    "/me/onboarding", response_model=WorkspaceMeOut, dependencies=[Depends(require_admin)]
+)
 async def complete_onboarding(
     payload: WorkspaceOnboardingIn,
     ws: Workspace = Depends(workspace),

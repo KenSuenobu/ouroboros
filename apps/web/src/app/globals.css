@@ -283,6 +283,111 @@ body {
   background: var(--accent-9);
 }
 
+.ob-server-pill {
+  cursor: pointer;
+  font-family: inherit;
+  appearance: none;
+}
+.ob-server-pill:hover {
+  background: var(--gray-a3);
+}
+
+.ob-user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--ob-border-strong);
+  background: var(--gray-a2);
+  cursor: pointer;
+  height: 28px;
+  color: var(--ob-text-1);
+}
+.ob-user-trigger:hover {
+  background: var(--gray-a3);
+}
+.ob-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-9);
+  color: var(--accent-contrast);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.ob-user-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.ob-user-name {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-role-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 5px;
+  border: 1px solid var(--ob-border-strong);
+  background: var(--gray-a3);
+  color: var(--ob-text-2);
+}
+.ob-role-badge[data-role="admin"] {
+  background: var(--accent-a3);
+  color: var(--accent-11);
+  border-color: var(--accent-a6);
+}
+
+.ob-menu {
+  min-width: 180px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--color-panel-solid);
+  border: 1px solid var(--ob-border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+}
+.ob-menu-label {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  color: var(--ob-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ob-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ob-text-1);
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+.ob-menu-item:hover,
+.ob-menu-item[data-highlighted] {
+  background: var(--gray-a3);
+  outline: none;
+}
+.ob-menu-sep {
+  height: 1px;
+  background: var(--ob-border);
+  margin: 4px 0;
+}
+
 /* ============================================================
    PageShell sidebar/main — backward-compatible classes used
    by every existing page. Restyled to live inside .ob-content.

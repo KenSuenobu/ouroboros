@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import (
     agents,
+    auth,
     flows,
     issues,
     mcp,
@@ -17,6 +18,7 @@ from .api import (
     providers,
     roadmap,
     runs,
+    users,
     workspaces,
     ws,
 )
@@ -56,6 +58,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.include_router(auth.router)
+    app.include_router(users.router)
     app.include_router(workspaces.router)
     app.include_router(projects.router)
     app.include_router(issues.router)

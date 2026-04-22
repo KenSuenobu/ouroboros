@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-21
+
+- Updated layout and look/feel of the application, far superior than previously designed.
+- Added required user accounts and per-workspace RBAC. First run now bootstraps an admin via `/setup`; every API route and WebSocket connection is gated by `current_user` and (where relevant) `require_admin`. Sessions are opaque tokens stored server-side in SQLite and delivered as `HttpOnly`, `SameSite=Lax` cookies with a 30-day sliding expiry.
+- Added email/password login, GitHub OAuth (`/api/auth/oauth/github/start`), and self-service registration when `OUROBOROS_AUTH_OPEN_REGISTRATION=true`.
+- Added admin user management at `/admin/users` (list, invite, change role, deactivate, remove) with safeguards against demoting or removing the last admin of a workspace.
+- Added an account page at `/account` for changing your password and reviewing linked accounts and workspace roles.
+- Hid admin-only navigation (Agents, Providers, MCP, Routing) for members; admin-only pages render an "Admins only" placeholder for non-admins.
+- Added a minimal `apps/cli/` (`ouroboros login|logout|whoami`) that stores a long-lived API token in the OS keyring and authenticates with `Authorization: Bearer ...`.
+- Added multi-server support to the web client. Login and setup pages now show a server picker (Local by default; users can add remote Ouroboros servers by URL). Selection is persisted to `localStorage` and mirrored to an `ob_server` cookie. A new Next route handler at `app/api/[...path]/route.ts` reads the cookie and proxies every API request to the selected backend so session cookies stay first-party. The topbar shows the active server with a one-click switcher that signs the user out and bounces them to the new server's login page. This is the foundation for hosted multi-tenant deployments and customer-managed model/server farms.
+
 ## 2026-04-20
 
 - Displays version ID in the upper left-hand corner near the app name.

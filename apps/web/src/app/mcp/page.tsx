@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Flex,
+  Heading,
   Tabs,
   Text,
   TextArea,
@@ -18,8 +19,29 @@ import { SidebarList } from "@/components/common/sidebar-list";
 import { useMcpRegistry, useMcpServers } from "@/lib/api/hooks";
 import { api } from "@/lib/api/client";
 import type { McpServer } from "@/lib/api/types";
+import { RequireAdmin } from "@/lib/auth/guards";
 
 export default function McpPage() {
+  return (
+    <RequireAdmin
+      fallback={
+        <PageShell sidebar={<div />}>
+          <PageHeader title="MCP" />
+          <Box p="5">
+            <Heading size="4" mb="2">Admins only</Heading>
+            <Text size="2" color="gray">
+              You need admin access in this workspace to manage MCP servers.
+            </Text>
+          </Box>
+        </PageShell>
+      }
+    >
+      <McpPageInner />
+    </RequireAdmin>
+  );
+}
+
+function McpPageInner() {
   const [query, setQuery] = useState("");
   const { data: registry = [] } = useMcpRegistry(query);
   const { data: installed = [] } = useMcpServers();

@@ -22,7 +22,7 @@ from ..orchestrator.context import RunContext
 from ..orchestrator.router import pick_model
 from ..sandbox import VirtualFs
 from ..secrets import secrets
-from .deps import db_session, workspace
+from .deps import current_user, db_session, require_admin, workspace
 from .schemas import (
     AgentIn,
     AgentOut,
@@ -66,7 +66,7 @@ async def list_agents(
     return [await _to_out(session, a) for a in res.scalars()]
 
 
-@router.post("", response_model=AgentOut, status_code=201)
+@router.post("", response_model=AgentOut, status_code=201, dependencies=[Depends(require_admin)])
 async def create_agent(
     payload: AgentIn,
     ws: Workspace = Depends(workspace),
@@ -98,7 +98,7 @@ async def create_agent(
     return await _to_out(session, agent)
 
 
-@router.put("/{agent_id}", response_model=AgentOut)
+@router.put("/{agent_id}", response_model=AgentOut, dependencies=[Depends(require_admin)])
 async def update_agent(
     agent_id: str,
     payload: AgentIn,
@@ -130,7 +130,7 @@ async def update_agent(
     return await _to_out(session, agent)
 
 
-@router.delete("/{agent_id}", status_code=204)
+@router.delete("/{agent_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_agent(
     agent_id: str,
     ws: Workspace = Depends(workspace),
@@ -145,12 +145,12 @@ async def delete_agent(
     await session.commit()
 
 
-@router.get("/_meta/adapters")
+@router.get("/_meta/adapters", dependencies=[Depends(current_user)])
 async def adapter_names() -> dict[str, list[str]]:
     return {"adapters": adapters().names()}
 
 
-@router.post("/{agent_id}/test", response_model=AgentTestResponse)
+@router.post("/{agent_id}/test", response_model=AgentTestResponse, dependencies=[Depends(require_admin)])
 async def test_agent(
     agent_id: str,
     payload: AgentTestRequest,

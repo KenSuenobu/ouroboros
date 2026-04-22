@@ -177,11 +177,13 @@ stays untouchable.
 | Lives in OSS (`ouroboros`)                | Lives in private (`ouroboros-cloud`)        |
 |-------------------------------------------|---------------------------------------------|
 | Engine, adapters, agents, MCP manager     | Stripe billing, RunMeter aggregator         |
-| Routing designer, dry-run, audit log      | SSO/SCIM, RBAC enforcement                  |
+| Routing designer, dry-run, audit log      | Policy-based RBAC, SSO/SAML/OIDC, SCIM      |
+| Email + GitHub OAuth login, admin/member  | Per-team RBAC tiers, group-mapped roles     |
+| roles per workspace, session mgmt         | enforcement                                 |
 | All providers (Ollama, Anthropic, ...)    | Managed-models provider proxy + caching     |
 | SQLite + Postgres backend                 | Multi-tenant migration tooling, vault       |
 | `SecretsBackend` interface + `keyring`    | `VaultBackend`, `AwsKmsBackend` impls       |
-| CLI (`ouroboros run`, `ouroboros agent`)  | Customer admin CLI, audit export            |
+| CLI (`ouroboros login`, `agent`, ...)     | Customer admin CLI, audit export            |
 
 **The rule of thumb:** if it's needed to make a self-hosted instance *useful*,
 it's open. If it's needed to *bill* or to *run a multi-tenant SaaS safely*, it's

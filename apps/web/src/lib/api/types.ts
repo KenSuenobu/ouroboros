@@ -1,5 +1,34 @@
 // Type mirrors of the FastAPI Pydantic schemas. Kept handwritten so we don't need codegen at boot.
 
+export type WorkspaceMembershipSummary = {
+  workspace_id: string;
+  workspace_slug: string;
+  workspace_name: string;
+  role: "admin" | "member";
+};
+
+export type AuthStatus = {
+  needs_setup: boolean;
+  open_registration: boolean;
+  github_oauth_enabled: boolean;
+};
+
+export type CurrentUser = {
+  id: string;
+  email: string;
+  display_name: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  has_password: boolean;
+  linked_oauth: string[];
+  memberships: WorkspaceMembershipSummary[];
+};
+
+export type AdminUser = Omit<CurrentUser, "memberships"> & {
+  role: "admin" | "member";
+};
+
 export type Workspace = {
   id: string;
   slug: string;

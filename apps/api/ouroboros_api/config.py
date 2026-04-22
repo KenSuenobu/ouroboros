@@ -43,6 +43,21 @@ class Settings(BaseSettings):
     github_oauth_client_id: str = ""
     github_oauth_scope: str = "repo"
 
+    # Auth
+    auth_session_ttl_days: int = 30
+    auth_session_cookie_name: str = "ob_session"
+    auth_open_registration: bool = False
+    auth_bootstrap_admin_email: str = ""
+    auth_bootstrap_admin_password: str = ""
+    auth_bootstrap_admin_name: str = "Administrator"
+    # Login OAuth (separate from the per-project SCM OAuth used to clone repos).
+    login_github_oauth_client_id: str = ""
+    login_github_oauth_client_secret_ref: str = "login_github_oauth_client_secret"
+    # Where to redirect the browser after a successful OAuth callback.
+    auth_post_login_redirect: str = "/"
+    # Same-origin web URL used to build absolute OAuth callback URLs when behind a proxy.
+    web_base_url: str = "http://localhost:3000"
+
     log_level: str = "INFO"
 
     def db_url_resolved(self) -> str:

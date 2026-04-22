@@ -14,7 +14,7 @@ from ..adapters.base import LLMMessage, ResolvedModel
 from ..adapters.registry import providers
 from ..db.models import Provider, ProviderModel, Workspace
 from ..secrets import secrets
-from .deps import db_session, workspace
+from .deps import db_session, require_admin, workspace
 from .schemas import (
     ProviderChatRequest,
     ProviderChatResponse,
@@ -164,7 +164,7 @@ async def list_providers(
     return [_to_out(p) for p in res.scalars()]
 
 
-@router.post("", response_model=ProviderOut, status_code=201)
+@router.post("", response_model=ProviderOut, status_code=201, dependencies=[Depends(require_admin)])
 async def create_provider(
     payload: ProviderIn,
     ws: Workspace = Depends(workspace),
@@ -204,7 +204,7 @@ async def get_provider(
     return _to_out(provider)
 
 
-@router.put("/{provider_id}", response_model=ProviderOut)
+@router.put("/{provider_id}", response_model=ProviderOut, dependencies=[Depends(require_admin)])
 async def update_provider(
     provider_id: str,
     payload: ProviderIn,
@@ -229,7 +229,7 @@ async def update_provider(
     return _to_out(provider)
 
 
-@router.delete("/{provider_id}", status_code=204)
+@router.delete("/{provider_id}", status_code=204, dependencies=[Depends(require_admin)])
 async def delete_provider(
     provider_id: str,
     ws: Workspace = Depends(workspace),
@@ -273,7 +273,11 @@ async def provider_health(
     return result
 
 
-@router.post("/{provider_id}/models/refresh", response_model=list[ProviderModelOut])
+@router.post(
+    "/{provider_id}/models/refresh",
+    response_model=list[ProviderModelOut],
+    dependencies=[Depends(require_admin)],
+)
 async def refresh_models(
     provider_id: str,
     ws: Workspace = Depends(workspace),
@@ -327,7 +331,11 @@ async def refresh_models(
     return [ProviderModelOut.model_validate(m) for m in res.scalars()]
 
 
-@router.post("/{provider_id}/chat", response_model=ProviderChatResponse)
+@router.post(
+    "/{provider_id}/chat",
+    response_model=ProviderChatResponse,
+    dependencies=[Depends(require_admin)],
+)
 async def chat(
     provider_id: str,
     payload: ProviderChatRequest,
